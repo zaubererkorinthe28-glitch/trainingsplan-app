@@ -10,13 +10,13 @@ body { margin:0; font-family:-apple-system,Arial,Helvetica,sans-serif; backgroun
 .container { max-width:520px; margin:18px auto; padding:16px; }
 header { background:#4caf50; color:#fff; border-radius:10px; padding:12px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.12); }
 h1 { margin:0; font-size:20px; }
-.nav { display:flex; gap:6px; margin:12px 0; }
-.nav button { flex:1; padding:8px; border-radius:8px; border:0; background:#eee; }
+.nav { display:flex; gap:6px; margin:12px 0; flex-wrap:wrap; }
+.nav button { flex:1; padding:8px; border-radius:8px; border:0; background:#eee; cursor:pointer; }
 .nav button.active { background:#4caf50; color:#fff; }
 .tab { display:none; }
 .tab.active { display:block; }
 input,select,textarea,button { width:100%; padding:8px; margin:6px 0; border-radius:8px; border:1px solid #ccc; box-sizing:border-box; }
-button.primary { background:#4caf50; color:#fff; border:0; }
+button.primary { background:#4caf50; color:#fff; border:0; cursor:pointer; }
 .exercise-item { background:#fff; border:1px solid #ddd; padding:8px; border-radius:8px; margin:6px 0; }
 .flex-row { display:flex; gap:8px; align-items:center; }
 .flex-row input { flex:1; }
@@ -24,7 +24,7 @@ button.primary { background:#4caf50; color:#fff; border:0; }
 .modal .card { background:#fff; padding:16px; border-radius:10px; width:92%; max-width:420px; }
 .modal .row { margin-bottom:8px; }
 .history-item { background:#fff; border:1px solid #ddd; border-radius:8px; padding:8px; margin:8px 0; }
-.danger { background:#e74c3c; color:#fff; border:0; }
+.danger { background:#e74c3c; color:#fff; border:0; cursor:pointer; }
 label.small { font-size:13px; color:#555; }
 canvas { background:#fff; border-radius:8px; padding:8px; }
 </style>
@@ -72,8 +72,11 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 <!-- FORTSCHRITT -->
 <div id="progress" class="tab">
 <h2>Fortschritt (planübergreifend)</h2>
-<select id="exerciseSelectProgress" onchange="onProgressSelectionChange()"><option value="">-- Übung wählen --</option></select>
-<select id="displayMode" onchange="renderProgressChart()"></select>
+<select id="exerciseSelectProgress" onchange="renderProgressChart()"><option value="">-- Übung wählen --</option></select>
+<select id="displayMode" onchange="renderProgressChart()">
+<option value="sum">Summe Wdh×Gewicht</option>
+<option value="max">Max Gewicht</option>
+</select>
 <canvas id="chart" height="220"></canvas>
 </div>
 
@@ -113,13 +116,12 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 </div>
 
 <script>
-// --- Daten & Storage ---
 let plans=JSON.parse(localStorage.getItem('plans')||'{}');
 let chart=null;
 let editing={plan:null,index:null};
+
 function saveData(){ localStorage.setItem('plans',JSON.stringify(plans)); }
 
-// --- Tabs ---
 function showTab(id){
 document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
 document.getElementById(id).classList.add('active');
@@ -143,6 +145,7 @@ selTrain.innerHTML+=`<option value="${p}">${p}</option>`;
 }
 loadPlan();
 }
+
 function addPlan(){
 const name=document.getElementById('planName').value.trim();
 if(!name) return alert('Planname fehlt');
@@ -152,6 +155,7 @@ saveData();
 document.getElementById('planName').value='';
 renderPlanSelectors();
 }
+
 function deletePlan(){
 const sel=document.getElementById('selectPlan').value;
 if(!sel) return alert('Kein Plan gewählt');
@@ -161,6 +165,7 @@ saveData();
 renderPlanSelectors();
 document.getElementById('exercises').innerHTML='';
 }
+
 function loadPlan(){
 const plan=document.getElementById('selectPlan').value;
 const container=document.getElementById('exercises'); container.innerHTML='';
@@ -176,6 +181,7 @@ el.innerHTML=`<strong>${ex.name}</strong> — ${ex.sets} Sätze ${ex.bodyweight?
 container.appendChild(el);
 });
 }
+
 function addExercise(){
 const plan=document.getElementById('selectPlan').value;
 if(!plan) return alert('Bitte Plan wählen');
@@ -191,12 +197,15 @@ document.getElementById('sets').value='';
 document.getElementById('bodyweight').checked=false;
 document.getElementById('notes').value='';
 loadPlan();
+updateExerciseSelectProgress();
 }
+
 function deleteExercise(plan,i){
 if(!confirm('Übung löschen?')) return;
 plans[plan].exercises.splice(i,1);
 saveData();
 loadPlan();
+updateExerciseSelectProgress();
 }
 
 // --- Edit Modal ---
@@ -209,7 +218,9 @@ document.getElementById('editBodyweight').checked=ex.bodyweight;
 document.getElementById('editNotes').value=ex.notes||'';
 document.getElementById('editModal').style.display='flex';
 }
+
 function closeEditModal(){ document.getElementById('editModal').style.display='none'; editing={plan:null,index:null}; }
+
 function saveExerciseEdit(){
 const ex=plans[editing.plan].exercises[editing.index];
 ex.name=document.getElementById('editName').value.trim();
@@ -278,7 +289,7 @@ const card=document.createElement('div'); card.className='history-item';
 card.innerHTML=`<strong>${p}</strong> — ${h.date}<div style="margin-top:6px">`+
 h.exercises.map(e=>{
 return `<div><strong>${e.name}</strong>: `+
-e.setsData.map(s=>`${s.weight?(s.weight+'kg×'):''}${s.reps}w`).join(', ')+
+(e.setsData.map(s=>`${s.weight?(s.weight+'kg×'):''}${s.reps}w`).join(', ')||'-')+
 (e.note?`<div style="margin-top:4px"><small>${e.note}</small></div>`:'')+
 `</div>`;
 }).join('')+
@@ -306,12 +317,9 @@ for(let p in plans){
 plans[p].exercises.forEach(e=>exercisesSet.add(e.name));
 }
 Array.from(exercisesSet).forEach(name=>{sel.innerHTML+=`<option value="${name}">${name}</option>`;});
-document.getElementById('displayMode').innerHTML='';
-const mode=document.getElementById('displayMode');
-mode.innerHTML=`<option value="sum">Summe Wdh×Gewicht</option>
-<option value="max">Max Gewicht</option>`;
+renderProgressChart();
 }
-function onProgressSelectionChange(){ renderProgressChart(); }
+
 function renderProgressChart(){
 const name=document.getElementById('exerciseSelectProgress').value;
 if(!name) return;
@@ -329,8 +337,9 @@ data.push(y); labels.push(h.date);
 });
 }
 if(chart) chart.destroy();
+if(data.length===0){ document.getElementById('chart').getContext('2d').clearRect(0,0,500,300); return; }
 const ctx=document.getElementById('chart').getContext('2d');
-chart=new Chart(ctx,{type:'line',data:{labels, datasets:[{label:name,data,fill:false,borderColor:'#4caf50'}]}});
+chart=new Chart(ctx,{type:'line',data:{labels, datasets:[{label:name,data,fill:false,borderColor:'#4caf50'}]},options:{responsive:true,scales:{y:{beginAtZero:true}}}});
 }
 
 // --- Übersicht ---
@@ -367,10 +376,7 @@ alert('Import erfolgreich!');
 reader.readAsText(file);
 }
 
-// --- Helfer ---
-function escapeHtml(str){return str.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-function escapeJS(str){return str.replace(/'/g,"\\'");}
-
+// --- Initialisierung ---
 renderPlanSelectors();
 updateExerciseSelectProgress();
 renderHistory();
