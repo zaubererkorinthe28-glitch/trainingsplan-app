@@ -23,6 +23,8 @@ th, td { padding: 5px; text-align: center; border-bottom: 1px solid #ccc; }
 .flex { display: flex; gap: 5px; justify-content: center; }
 textarea { resize: vertical; }
 canvas { margin-top: 10px; }
+.exercise-item { border:1px solid #ccc; border-radius:5px; padding:5px; margin:5px 0; background:#fff;}
+.exercise-item button { margin: 2px; padding:4px; font-size:0.8em; }
 </style>
 </head>
 <body>
@@ -53,7 +55,7 @@ canvas { margin-top: 10px; }
 <textarea id="notes" placeholder="Notizen zur Übung"></textarea>
 <button onclick="addExercise()">Übung hinzufügen</button>
 
-<ul id="exercises"></ul>
+<div id="exercises"></div>
 </div>
 
 <!-- Training Tab -->
@@ -68,11 +70,8 @@ canvas { margin-top: 10px; }
 
 <!-- Fortschritt Tab -->
 <div id="progress" class="tab">
-<h2>Fortschritt</h2>
-<select id="progressPlan" onchange="updateExerciseSelect()">
-<option value="">-- Plan wählen --</option>
-</select>
-<select id="exerciseSelect" onchange="showProgress()">
+<h2>Fortschritt (planübergreifend)</h2>
+<select id="exerciseSelectProgress" onchange="showProgressCrossPlans()">
 <option value="">-- Übung wählen --</option>
 </select>
 <canvas id="chart" width="400" height="200"></canvas>
@@ -103,34 +102,31 @@ function renderPlans(){
     const plansList = document.getElementById('exercises');
     const selectPlan = document.getElementById('selectPlan');
     const selectTrainingPlan = document.getElementById('selectTrainingPlan');
-    const progressPlan = document.getElementById('progressPlan');
-    const overview = document.getElementById('allPlans');
-    plansList.innerHTML = '';
-    selectPlan.innerHTML = '<option value="">-- Plan wählen --</option>';
-    selectTrainingPlan.innerHTML = '<option value="">-- Plan wählen --</option>';
-    progressPlan.innerHTML = '<option value="">-- Plan wählen --</option>';
-    overview.innerHTML = '';
+    plansList.innerHTML='';
+    selectPlan.innerHTML='<option value="">-- Plan wählen --</option>';
+    selectTrainingPlan.innerHTML='<option value="">-- Plan wählen --</option>';
     for(let name in plans){
         selectPlan.innerHTML += `<option value="${name}">${name}</option>`;
         selectTrainingPlan.innerHTML += `<option value="${name}">${name}</option>`;
-        progressPlan.innerHTML += `<option value="${name}">${name}</option>`;
-        if(document.getElementById('selectPlan').value === name){
-            plans[name].exercises.forEach(ex=>{
-                plansList.innerHTML += `<li>${ex.name} - ${ex.sets} Sätze${ex.bodyweight ? ' (Körpergewicht)' : ''} <br>Notizen: ${ex.notes||''}</li>`;
+        if(document.getElementById('selectPlan').value===name){
+            plans[name].exercises.forEach((ex,i)=>{
+                const div = document.createElement('div');
+                div.className='exercise-item';
+                div.innerHTML=`<b>${ex.name}</b> - ${ex.sets} Sätze${ex.bodyweight?' (Körpergewicht)':''}<br>Notizen: ${ex.notes||''}
+                    <button onclick="editExercise('${name}',${i})">Bearbeiten</button>
+                    <button onclick="deleteExercise('${name}',${i})">Löschen</button>`;
+                plansList.appendChild(div);
             });
         }
-        // Übersicht
-        overview.innerHTML += `<h3>${name}</h3><ul>`+plans[name].exercises.map(ex=>`<li>${ex.name} - ${ex.sets} Sätze${ex.bodyweight ? ' (Körpergewicht)' : ''} <br>Notizen: ${ex.notes||''}</li>`).join('')+'</ul>';
     }
+    renderOverview();
 }
-
-renderPlans();
 
 function addPlan(){
     const name = document.getElementById('planName').value.trim();
     if(!name) return alert('Planname erforderlich');
     if(plans[name]) return alert('Plan existiert bereits');
-    plans[name] = { exercises: [], history: [] };
+    plans[name]={ exercises: [], history: [] };
     saveData(); document.getElementById('planName').value='';
     renderPlans();
 }
@@ -149,6 +145,23 @@ function addExercise(){
     renderPlans();
 }
 
+function editExercise(planName,i){
+    const ex=plans[planName].exercises[i];
+    const newName=prompt('Übungsname', ex.name);
+    if(newName) ex.name=newName;
+    const newSets=parseInt(prompt('Sätze', ex.sets));
+    if(newSets>0) ex.sets=newSets;
+    const newBody=confirm('Körpergewicht? OK=Ja, Abbrechen=Nein');
+    ex.bodyweight=newBody;
+    const newNotes=prompt('Notizen', ex.notes||'');
+    ex.notes=newNotes;
+    saveData(); renderPlans();
+}
+
+function deleteExercise(planName,i){
+    if(confirm('Übung löschen?')){ plans[planName].exercises.splice(i,1); saveData(); renderPlans(); }
+}
+
 // Training Tab
 function loadTrainingPlan(){
     const planName = document.getElementById('selectTrainingPlan').value;
@@ -160,7 +173,7 @@ function loadTrainingPlan(){
         row.innerHTML = `<b>${ex.name}${ex.bodyweight?' (Körpergewicht)':''}</b> (${ex.sets} Sätze)
             <textarea placeholder="Notizen (optional)">${ex.notes||''}</textarea>`;
         for(let s=0;s<ex.sets;s++){
-            let input = ex.bodyweight ? 
+            let input = ex.bodyweight ?
             `<input type="text" placeholder="Wdh" id="rep_${i}_${s}">` :
             `<input type="text" placeholder="Gewicht (kg)" id="weight_${i}_${s}"> <input type="text" placeholder="Wdh" id="rep_${i}_${s}">`;
             row.innerHTML += `<div class="flex">Satz ${s+1}: ${input}</div>`;
@@ -186,44 +199,59 @@ function saveTraining(){
     plans[planName].history.push(entry);
     saveData();
     alert('Training gespeichert!');
-    updateExerciseSelect();
+    updateExerciseSelectProgress();
 }
 
-// Fortschritt
-function updateExerciseSelect(){
-    const planName = document.getElementById('progressPlan').value;
-    const select = document.getElementById('exerciseSelect');
+// Fortschritt planübergreifend
+function updateExerciseSelectProgress(){
+    const select = document.getElementById('exerciseSelectProgress');
+    const exNames = new Set();
+    for(let plan in plans){
+        plans[plan].exercises.forEach(ex=>exNames.add(ex.name));
+    }
     select.innerHTML='<option value="">-- Übung wählen --</option>';
-    if(!planName) return;
-    plans[planName].exercises.forEach(ex=>{
-        select.innerHTML += `<option value="${ex.name}">${ex.name}</option>`;
-    });
-    showProgress();
+    Array.from(exNames).forEach(name=>{ select.innerHTML += `<option value="${name}">${name}</option>`; });
+    showProgressCrossPlans();
 }
 
-function showProgress(){
-    const planName = document.getElementById('progressPlan').value;
-    const exName = document.getElementById('exerciseSelect').value;
-    if(!planName || !exName) return;
-    const history = plans[planName].history;
-    const data = history.map(entry=>{
-        const ex = entry.data.find(e=>e.name===exName);
-        if(!ex) return null;
-        const total = ex.setsData.reduce((sum,set)=>sum+(set.weight?set.weight*set.reps:set.reps),0);
-        const max = ex.setsData.reduce((m,set)=>Math.max(m,set.weight||0),0);
-        return { date: entry.date, total, max };
-    }).filter(d=>d!==null);
+function showProgressCrossPlans(){
+    const exName = document.getElementById('exerciseSelectProgress').value;
+    if(!exName) return;
+    const allData=[];
+    for(let plan in plans){
+        plans[plan].history.forEach(entry=>{
+            const ex = entry.data.find(e=>e.name===exName);
+            if(ex){
+                const total = ex.setsData.reduce((sum,set)=>sum+(set.weight?set.weight*set.reps:set.reps),0);
+                const max = ex.setsData.reduce((m,set)=>Math.max(m,set.weight||0),0);
+                allData.push({date: entry.date, total, max});
+            }
+        });
+    }
+    allData.sort((a,b)=>new Date(a.date)-new Date(b.date));
     const chartData = {
-        labels: data.map(d=>d.date),
+        labels: allData.map(d=>d.date),
         datasets:[
-            { label:'Summe Wdh*Gewicht', data:data.map(d=>d.total), borderColor:'#4CAF50', fill:false, tension:0.3 },
-            { label:'Max Gewicht', data:data.map(d=>d.max), borderColor:'#f44336', fill:false, tension:0.3 }
+            { label:'Summe Wdh*Gewicht', data:allData.map(d=>d.total), borderColor:'#4CAF50', fill:false, tension:0.3 },
+            { label:'Max Gewicht', data:allData.map(d=>d.max), borderColor:'#f44336', fill:false, tension:0.3 }
         ]
     };
     const config={type:'line', data: chartData, options:{responsive:true}};
     if(chart) chart.destroy();
     chart = new Chart(document.getElementById('chart'), config);
 }
+
+// Übersicht Tab
+function renderOverview(){
+    const overview = document.getElementById('allPlans');
+    overview.innerHTML='';
+    for(let plan in plans){
+        overview.innerHTML += `<h3>${plan}</h3><ul>`+plans[plan].exercises.map(ex=>`<li>${ex.name} - ${ex.sets} Sätze${ex.bodyweight?' (Körpergewicht)':''} <br>Notizen: ${ex.notes||''}</li>`).join('')+'</ul>';
+    }
+}
+
+renderPlans();
+updateExerciseSelectProgress();
 </script>
 </body>
 </html>
