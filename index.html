@@ -21,7 +21,7 @@ button:hover { background: #45a049; }
 .exercise-item { border:1px solid #ccc; border-radius:5px; padding:5px; margin:5px 0; background:#fff;}
 .exercise-item button { margin: 2px; padding:4px; font-size:0.8em; }
 
-/* --- Modal Fenster --- */
+/* Modal Fenster */
 #editModal {
   display: none;
   position: fixed;
@@ -38,7 +38,6 @@ button:hover { background: #45a049; }
   width: 90%;
   max-width: 400px;
 }
-.modal-content h3 { margin-top: 0; }
 .modal-buttons { display: flex; justify-content: space-between; }
 </style>
 </head>
@@ -80,7 +79,7 @@ button:hover { background: #45a049; }
 <option value="">-- Plan wählen --</option>
 </select>
 <label>📅 Trainingsdatum:</label>
-<input type="date" id="trainingDate">
+<input type="date" id="trainingDate" value="">
 <div id="trainingExercises"></div>
 <button onclick="saveTraining()">Training speichern</button>
 </div>
@@ -99,7 +98,6 @@ button:hover { background: #45a049; }
 <h2>Alle Trainingspläne</h2>
 <div id="allPlans"></div>
 </div>
-
 </div>
 
 <!-- Modal: Übung bearbeiten -->
@@ -209,7 +207,94 @@ function saveExerciseEdit(){
   saveData(); closeEditModal(); loadPlan();
 }
 
-/* Fortschritt etc. bleibt unverändert (Chart.js) – kann ich bei Bedarf direkt ergänzen */
+/* --- TRAINING --- */
+function loadTrainingPlan(){
+  const planName=document.getElementById('selectTrainingPlan').value;
+  const div=document.getElementById('trainingExercises');
+  div.innerHTML='';
+  if(!planName) return;
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('trainingDate').value=today;
+  plans[planName].exercises.forEach((ex)=>{
+    let html=`<div class='exercise-item'><b>${ex.name}</b><br>`;
+    for(let i=1;i<=ex.sets;i++){
+      html+=`Satz ${i}: `;
+      if(!ex.bodyweight){
+        html+=`<input type='number' placeholder='Gewicht' id='${ex.name}_w${i}' style='width:45%'> `;
+      }
+      html+=`<input type='number' placeholder='Wdh' id='${ex.name}_r${i}' style='width:45%'><br>`;
+    }
+    html+=`<textarea id='${ex.name}_note' placeholder='Notiz'></textarea></div>`;
+    div.innerHTML+=html;
+  });
+}
+
+function saveTraining(){
+  const planName=document.getElementById('selectTrainingPlan').value;
+  if(!planName) return alert('Plan wählen');
+  const date=document.getElementById('trainingDate').value;
+  const exercises=[];
+  plans[planName].exercises.forEach(ex=>{
+    const setsData=[];
+    for(let i=1;i<=ex.sets;i++){
+      const weight=!ex.bodyweight?parseFloat(document.getElementById(`${ex.name}_w${i}`).value)||0:0;
+      const reps=parseInt(document.getElementById(`${ex.name}_r${i}`).value)||0;
+      setsData.push({weight,reps});
+    }
+    const note=document.getElementById(`${ex.name}_note`).value;
+    exercises.push({name:ex.name,setsData,note});
+  });
+  plans[planName].history.push({date,exercises});
+  saveData();
+  alert('Training gespeichert!');
+}
+
+/* --- FORTSCHRITT --- */
+function updateExerciseSelectProgress(){
+  const sel=document.getElementById('exerciseSelectProgress');
+  sel.innerHTML='<option value="">-- Übung wählen --</option>';
+  const names=new Set();
+  for(let p in plans){
+    plans[p].exercises.forEach(ex=>names.add(ex.name));
+  }
+  names.forEach(n=>sel.innerHTML+=`<option>${n}</option>`);
+}
+
+function showProgressCrossPlans(){
+  const name=document.getElementById('exerciseSelectProgress').value;
+  if(!name) return;
+  const data=[];
+  for(let p in plans){
+    plans[p].history.forEach(h=>{
+      h.exercises.forEach(ex=>{
+        if(ex.name===name){
+          const total=ex.setsData.reduce((a,s)=>a+(s.weight*s.reps),0);
+          data.push({date:h.date,total});
+        }
+      });
+    });
+  }
+  data.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(chart) chart.destroy();
+  chart=new Chart(document.getElementById('chart'),{
+    type:'line',
+    data:{
+      labels:data.map(d=>d.date),
+      datasets:[{label:name,data:data.map(d=>d.total),fill:false,borderWidth:2}]
+    },
+    options:{responsive:true,scales:{y:{beginAtZero:true,title:{display:true,text:'Wdh × Gewicht'}}}}
+  });
+}
+
+function renderOverview(){
+  const o=document.getElementById('allPlans');
+  o.innerHTML='';
+  for(let p in plans){
+    o.innerHTML+=`<h3>${p}</h3><ul>`+plans[p].exercises.map(ex=>`<li>${ex.name} (${ex.sets} Sätze) ${ex.bodyweight?'(Körpergewicht)':''}<br>Notizen: ${ex.notes||''}</li>`).join('')+'</ul>';
+  }
+}
+
+renderPlans();
 </script>
 </body>
 </html>
