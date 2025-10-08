@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trainings-App</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* Grundlayout */
+body { margin: 0; font-family: -apple-system, Arial; background: #f0f2f5; color: #333; }
+.container { max-width: 500px; margin: auto; padding: 20px; }
+header { text-align: center; padding: 10px 0; background: #4CAF50; color: #fff; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
+h1,h2 { margin: 10px 0; }
+input, select, button { padding: 8px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
+button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+button:hover { background: #45a049; }
+.tab { display: none; }
+.tab.active { display: block; }
+.nav { display: flex; justify-content: space-around; margin-bottom: 10px; }
+.nav button { flex: 1; margin: 0 2px; background: #eee; color: #333; border-radius: 5px; }
+.nav button.active { background: #4CAF50; color: #fff; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { padding: 5px; text-align: center; border-bottom: 1px solid #ccc; }
+input[type=text], input[type=number] { width: 60px; }
+.flex { display: flex; gap: 5px; justify-content: center; }
+canvas { margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+<header><h1>🏋️ Trainings-App</h1></header>
+
+<div class="nav">
+    <button onclick="showTab('plans')" id="tabBtnPlans" class="active">Pläne</button>
+    <button onclick="showTab('training')" id="tabBtnTraining">Training</button>
+    <button onclick="showTab('progress')" id="tabBtnProgress">Fortschritt</button>
+</div>
+
+<!-- Pläne Tab -->
+<div id="plans" class="tab active">
+<h2>Neuen Plan erstellen</h2>
+<input type="text" id="planName" placeholder="Planname">
+<button onclick="addPlan()">Plan hinzufügen</button>
+
+<h2>Plan bearbeiten</h2>
+<select id="selectPlan" onchange="loadPlan()">
+<option value="">-- Plan wählen --</option>
+</select>
+<input type="text" id="exerciseName" placeholder="Übung">
+<input type="number" id="sets" placeholder="Sätze">
+<button onclick="addExercise()">Übung hinzufügen</button>
+
+<ul id="exercises"></ul>
+</div>
+
+<!-- Training Tab -->
+<div id="training" class="tab">
+<h2>Training starten</h2>
+<select id="selectTrainingPlan" onchange="loadTrainingPlan()">
+<option value="">-- Plan wählen --</option>
+</select>
+<div id="trainingExercises"></div>
+<button onclick="saveTraining()">Training speichern</button>
+</div>
+
+<!-- Fortschritt Tab -->
+<div id="progress" class="tab">
+<h2>Fortschritt</h2>
+<select id="progressPlan" onchange="updateExerciseSelect()">
+<option value="">-- Plan wählen --</option>
+</select>
+<select id="exerciseSelect" onchange="showProgress()">
+<option value="">-- Übung wählen --</option>
+</select>
+<canvas id="chart" width="400" height="200"></canvas>
+</div>
+
+</div>
+
+<script>
+let plans = JSON.parse(localStorage.getItem('plans') || '{}');
+let chart;
+
+// --- Tab Navigation ---
+function showTab(tabId){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tabBtn'+tabId.charAt(0).toUpperCase()+tabId.slice(1)).classList.add('active');
+}
+
+// --- Data Handling ---
+function saveData(){ localStorage.setItem('plans', JSON.stringify(plans)); }
+
+function renderPlans(){
+    const plansList = document.getElementById('exercises');
+    const selectPlan = document.getElementById('selectPlan');
+    const selectTrainingPlan = document.getElementById('selectTrainingPlan');
+    const progressPlan = document.getElementById('progressPlan');
+    plansList.innerHTML = '';
+    selectPlan.innerHTML = '<option value="">-- Plan wählen --</option>';
+    selectTrainingPlan.innerHTML = '<option value="">-- Plan wählen --</option>';
+    progressPlan.innerHTML = '<option value="">-- Plan wählen --</option>';
+    for(let name in plans){
+        selectPlan.innerHTML += `<option value="${name}">${name}</option>`;
+        selectTrainingPlan.innerHTML += `<option value="${name}">${name}</option>`;
+        progressPlan.innerHTML += `<option value="${name}">${name}</option>`;
+        if(document.getElementById('selectPlan').value === name){
+            plans[name].exercises.forEach(ex=>{
+                plansList.innerHTML += `<li>${ex.name} - ${ex.sets} Sätze</li>`;
+            });
+        }
+    }
+}
+
+renderPlans();
+
+// --- Pläne ---
+function addPlan(){
+    const name = document.getElementById('planName').value.trim();
+    if(!name) return alert('Planname erforderlich');
+    if(plans[name]) return alert('Plan existiert bereits');
+    plans[name] = { exercises: [], history: [] };
+    saveData(); document.getElementById('planName').value='';
+    renderPlans();
+}
+
+function addExercise(){
+    const planName = document.getElementById('selectPlan').value;
+    if(!planName) return alert('Bitte Plan auswählen');
+    const exName = document.getElementById('exerciseName').value.trim();
+    const sets = parseInt(document.getElementById('sets').value);
+    if(!exName || !sets) return alert('Übung und Sätze erforderlich');
+    plans[planName].exercises.push({name: exName, sets: sets});
+    saveData();
+    document.getElementById('exerciseName').value=''; document.getElementById('sets').value='';
+    renderPlans();
+}
+
+// --- Training ---
+function loadTrainingPlan(){
+    const planName = document.getElementById('selectTrainingPlan').value;
+    const container = document.getElementById('trainingExercises');
+    container.innerHTML='';
+    if(!planName) return;
+    plans[planName].exercises.forEach((ex,i)=>{
+        let row = document.createElement('div');
+        row.innerHTML = `<b>${ex.name}</b> (${ex.sets} Sätze)
+            <div class="flex">
+                <input type="text" id="weight_${i}" placeholder="Gewicht (kg)">
+                <input type="text" id="reps_${i}" placeholder="Wdh">
+            </div>`;
+        container.appendChild(row);
+    });
+}
+
+function saveTraining(){
+    const planName = document.getElementById('selectTrainingPlan').value;
+    if(!planName) return alert('Plan wählen');
+    const exercises = plans[planName].exercises;
+    const entry = { date: new Date().toLocaleDateString(), data: [] };
+    exercises.forEach((ex,i)=>{
+        const weights = document.getElementById(`weight_${i}`).value.split(',').map(Number);
+        const reps = document.getElementById(`reps_${i}`).value.split(',').map(Number);
+        entry.data.push({ name: ex.name, sets: ex.sets, weights, reps });
+    });
+    plans[planName].history.push(entry);
+    saveData();
+    alert('Training gespeichert!');
+    updateExerciseSelect();
+}
+
+// --- Fortschritt ---
+function updateExerciseSelect(){
+    const planName = document.getElementById('progressPlan').value;
+    const select = document.getElementById('exerciseSelect');
+    select.innerHTML='<option value="">-- Übung wählen --</option>';
+    if(!planName) return;
+    plans[planName].exercises.forEach(ex=>{
+        select.innerHTML += `<option value="${ex.name}">${ex.name}</option>`;
+    });
+    showProgress();
+}
+
+function showProgress(){
+    const planName = document.getElementById('progressPlan').value;
+    const exName = document.getElementById('exerciseSelect').value;
+    if(!planName || !exName) return;
+    const history = plans[planName].history;
+    const data = history.map(entry=>{
+        const ex = entry.data.find(e=>e.name===exName);
+        if(!ex) return null;
+        const total = ex.weights.reduce((sum,w,i)=>sum+w*ex.reps[i]||0,0);
+        const max = Math.max(...ex.weights);
+        return { date: entry.date, total, max };
+    }).filter(d=>d!==null);
+    const chartData = {
+        labels: data.map(d=>d.date),
+        datasets:[
+            { label:'Summe Wdh*Gewicht', data:data.map(d=>d.total), borderColor:'#4CAF50', fill:false, tension:0.3 },
+            { label:'Max Gewicht', data:data.map(d=>d.max), borderColor:'#f44336', fill:false, tension:0.3 }
+        ]
+    };
+    const config={type:'line', data: chartData, options:{responsive:true}};
+    if(chart) chart.destroy();
+    chart = new Chart(document.getElementById('chart'), config);
+}
+
+</script>
+</body>
+</html>
