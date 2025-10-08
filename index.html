@@ -64,6 +64,9 @@ canvas { margin-top: 10px; }
 <select id="selectTrainingPlan" onchange="loadTrainingPlan()">
 <option value="">-- Plan wählen --</option>
 </select>
+
+<label>📅 Trainingsdatum:</label>
+<input type="date" id="trainingDate" value="">
 <div id="trainingExercises"></div>
 <button onclick="saveTraining()">Training speichern</button>
 </div>
@@ -94,32 +97,39 @@ function showTab(tabId){
     document.getElementById(tabId).classList.add('active');
     document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
     document.getElementById('tabBtn'+tabId.charAt(0).toUpperCase()+tabId.slice(1)).classList.add('active');
+    if(tabId === "plans") renderPlans();
+    if(tabId === "progress") updateExerciseSelectProgress();
 }
 
 function saveData(){ localStorage.setItem('plans', JSON.stringify(plans)); }
 
 function renderPlans(){
-    const plansList = document.getElementById('exercises');
+    const exercisesDiv = document.getElementById('exercises');
     const selectPlan = document.getElementById('selectPlan');
     const selectTrainingPlan = document.getElementById('selectTrainingPlan');
-    plansList.innerHTML='';
     selectPlan.innerHTML='<option value="">-- Plan wählen --</option>';
     selectTrainingPlan.innerHTML='<option value="">-- Plan wählen --</option>';
     for(let name in plans){
         selectPlan.innerHTML += `<option value="${name}">${name}</option>`;
         selectTrainingPlan.innerHTML += `<option value="${name}">${name}</option>`;
-        if(document.getElementById('selectPlan').value===name){
-            plans[name].exercises.forEach((ex,i)=>{
-                const div = document.createElement('div');
-                div.className='exercise-item';
-                div.innerHTML=`<b>${ex.name}</b> - ${ex.sets} Sätze${ex.bodyweight?' (Körpergewicht)':''}<br>Notizen: ${ex.notes||''}
-                    <button onclick="editExercise('${name}',${i})">Bearbeiten</button>
-                    <button onclick="deleteExercise('${name}',${i})">Löschen</button>`;
-                plansList.appendChild(div);
-            });
-        }
     }
+    exercisesDiv.innerHTML='';
     renderOverview();
+}
+
+function loadPlan(){
+    const planName = document.getElementById('selectPlan').value;
+    const div = document.getElementById('exercises');
+    div.innerHTML='';
+    if(!planName) return;
+    plans[planName].exercises.forEach((ex,i)=>{
+        const eDiv = document.createElement('div');
+        eDiv.className='exercise-item';
+        eDiv.innerHTML=`<b>${ex.name}</b> - ${ex.sets} Sätze${ex.bodyweight?' (Körpergewicht)':''}<br>Notizen: ${ex.notes||''}
+        <button onclick="editExercise('${planName}',${i})">Bearbeiten</button>
+        <button onclick="deleteExercise('${planName}',${i})">Löschen</button>`;
+        div.appendChild(eDiv);
+    });
 }
 
 function addPlan(){
@@ -139,10 +149,10 @@ function addExercise(){
     const bodyweight = document.getElementById('bodyweight').checked;
     const notes = document.getElementById('notes').value.trim();
     if(!exName || !sets) return alert('Übung und Sätze erforderlich');
-    plans[planName].exercises.push({name: exName, sets: sets, bodyweight, notes});
+    plans[planName].exercises.push({name: exName, sets, bodyweight, notes});
     saveData();
     document.getElementById('exerciseName').value=''; document.getElementById('sets').value=''; document.getElementById('bodyweight').checked=false; document.getElementById('notes').value='';
-    renderPlans();
+    loadPlan();
 }
 
 function editExercise(planName,i){
@@ -155,19 +165,22 @@ function editExercise(planName,i){
     ex.bodyweight=newBody;
     const newNotes=prompt('Notizen', ex.notes||'');
     ex.notes=newNotes;
-    saveData(); renderPlans();
+    saveData(); loadPlan();
 }
 
 function deleteExercise(planName,i){
-    if(confirm('Übung löschen?')){ plans[planName].exercises.splice(i,1); saveData(); renderPlans(); }
+    if(confirm('Übung löschen?')){ plans[planName].exercises.splice(i,1); saveData(); loadPlan(); }
 }
 
-// Training Tab
+// Training
 function loadTrainingPlan(){
     const planName = document.getElementById('selectTrainingPlan').value;
     const container = document.getElementById('trainingExercises');
     container.innerHTML='';
     if(!planName) return;
+    if(!document.getElementById('trainingDate').value){
+        document.getElementById('trainingDate').value = new Date().toISOString().split('T')[0];
+    }
     plans[planName].exercises.forEach((ex,i)=>{
         let row = document.createElement('div');
         row.innerHTML = `<b>${ex.name}${ex.bodyweight?' (Körpergewicht)':''}</b> (${ex.sets} Sätze)
@@ -185,8 +198,9 @@ function loadTrainingPlan(){
 function saveTraining(){
     const planName = document.getElementById('selectTrainingPlan').value;
     if(!planName) return alert('Plan wählen');
+    const date = document.getElementById('trainingDate').value || new Date().toISOString().split('T')[0];
     const exercises = plans[planName].exercises;
-    const entry = { date: new Date().toLocaleDateString(), data: [] };
+    const entry = { date, data: [] };
     exercises.forEach((ex,i)=>{
         const setsData = [];
         for(let s=0;s<ex.sets;s++){
@@ -202,16 +216,13 @@ function saveTraining(){
     updateExerciseSelectProgress();
 }
 
-// Fortschritt planübergreifend
+// Fortschritt
 function updateExerciseSelectProgress(){
     const select = document.getElementById('exerciseSelectProgress');
     const exNames = new Set();
-    for(let plan in plans){
-        plans[plan].exercises.forEach(ex=>exNames.add(ex.name));
-    }
+    for(let plan in plans){ plans[plan].exercises.forEach(ex=>exNames.add(ex.name)); }
     select.innerHTML='<option value="">-- Übung wählen --</option>';
     Array.from(exNames).forEach(name=>{ select.innerHTML += `<option value="${name}">${name}</option>`; });
-    showProgressCrossPlans();
 }
 
 function showProgressCrossPlans(){
@@ -229,24 +240,29 @@ function showProgressCrossPlans(){
         });
     }
     allData.sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const chartData = {
-        labels: allData.map(d=>d.date),
-        datasets:[
-            { label:'Summe Wdh*Gewicht', data:allData.map(d=>d.total), borderColor:'#4CAF50', fill:false, tension:0.3 },
-            { label:'Max Gewicht', data:allData.map(d=>d.max), borderColor:'#f44336', fill:false, tension:0.3 }
-        ]
-    };
-    const config={type:'line', data: chartData, options:{responsive:true}};
+    const ctx = document.getElementById('chart').getContext('2d');
     if(chart) chart.destroy();
-    chart = new Chart(document.getElementById('chart'), config);
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: allData.map(d=>d.date),
+            datasets: [
+                { label:'Summe Wdh×Gewicht', data:allData.map(d=>d.total), borderColor:'#4CAF50', fill:false, tension:0.3 },
+                { label:'Max Gewicht', data:allData.map(d=>d.max), borderColor:'#f44336', fill:false, tension:0.3 }
+            ]
+        },
+        options: { responsive:true, scales:{y:{beginAtZero:true}} }
+    });
 }
 
-// Übersicht Tab
+// Übersicht
 function renderOverview(){
     const overview = document.getElementById('allPlans');
     overview.innerHTML='';
     for(let plan in plans){
-        overview.innerHTML += `<h3>${plan}</h3><ul>`+plans[plan].exercises.map(ex=>`<li>${ex.name} - ${ex.sets} Sätze${ex.bodyweight?' (Körpergewicht)':''} <br>Notizen: ${ex.notes||''}</li>`).join('')+'</ul>';
+        overview.innerHTML += `<h3>${plan}</h3><ul>`+
+        plans[plan].exercises.map(ex=>`<li>${ex.name} - ${ex.sets} Sätze${ex.bodyweight?' (Körpergewicht)':''}<br>Notizen: ${ex.notes||''}</li>`).join('')+
+        '</ul>';
     }
 }
 
