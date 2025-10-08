@@ -1,74 +1,58 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trainings-App</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body { margin: 0; font-family: -apple-system, Arial; background: #f0f2f5; color: #333; }
-.container { max-width: 500px; margin: auto; padding: 20px; }
-header { text-align: center; padding: 10px 0; background: #4CAF50; color: #fff; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
-h1,h2 { margin: 10px 0; }
-input, select, button, textarea { padding: 8px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
-button { background: #4CAF50; color: white; border: none; cursor: pointer; }
-button:hover { background: #45a049; }
-.tab { display: none; }
-.tab.active { display: block; }
-.nav { display: flex; justify-content: space-around; margin-bottom: 10px; }
-.nav button { flex: 1; margin: 0 2px; background: #eee; color: #333; border-radius: 5px; }
-.nav button.active { background: #4CAF50; color: #fff; }
-.exercise-item { border:1px solid #ccc; border-radius:5px; padding:5px; margin:5px 0; background:#fff;}
-.exercise-item button { margin: 2px; padding:4px; font-size:0.8em; }
-
-/* Modal */
-#editModal {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-.modal-content {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 400px;
-}
-.modal-buttons { display: flex; justify-content: space-between; }
-.history-item { background:#fff; border:1px solid #ccc; border-radius:8px; margin:5px 0; padding:8px; }
+body { margin:0; font-family:-apple-system,Arial,Helvetica,sans-serif; background:#f0f2f5; color:#222; }
+.container { max-width:520px; margin:18px auto; padding:16px; }
+header { background:#4caf50; color:#fff; border-radius:10px; padding:12px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.12); }
+h1 { margin:0; font-size:20px; }
+.nav { display:flex; gap:6px; margin:12px 0; }
+.nav button { flex:1; padding:8px; border-radius:8px; border:0; background:#eee; }
+.nav button.active { background:#4caf50; color:#fff; }
+.tab { display:none; }
+.tab.active { display:block; }
+input,select,textarea,button { width:100%; padding:8px; margin:6px 0; border-radius:8px; border:1px solid #ccc; box-sizing:border-box; }
+button.primary { background:#4caf50; color:#fff; border:0; }
+.exercise-item { background:#fff; border:1px solid #ddd; padding:8px; border-radius:8px; margin:6px 0; }
+.flex-row { display:flex; gap:8px; align-items:center; }
+.flex-row input { flex:1; }
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); justify-content:center; align-items:center; z-index:20; }
+.modal .card { background:#fff; padding:16px; border-radius:10px; width:92%; max-width:420px; }
+.modal .row { margin-bottom:8px; }
+.history-item { background:#fff; border:1px solid #ddd; border-radius:8px; padding:8px; margin:8px 0; }
+.danger { background:#e74c3c; color:#fff; border:0; }
+label.small { font-size:13px; color:#555; }
+canvas { background:#fff; border-radius:8px; padding:8px; }
 </style>
 </head>
 <body>
 <div class="container">
 <header><h1>🏋️ Trainings-App</h1></header>
-
 <div class="nav">
-  <button onclick="showTab('plans')" id="tabBtnPlans" class="active">Pläne</button>
-  <button onclick="showTab('training')" id="tabBtnTraining">Training</button>
-  <button onclick="showTab('progress')" id="tabBtnProgress">Fortschritt</button>
-  <button onclick="showTab('history')" id="tabBtnHistory">Historie</button>
-  <button onclick="showTab('overview')" id="tabBtnOverview">Übersicht</button>
+<button id="btnPlans" class="active" onclick="showTab('plans')">Pläne</button>
+<button id="btnTraining" onclick="showTab('training')">Training</button>
+<button id="btnProgress" onclick="showTab('progress')">Fortschritt</button>
+<button id="btnHistory" onclick="showTab('history')">Historie</button>
+<button id="btnOverview" onclick="showTab('overview')">Übersicht</button>
 </div>
 
 <!-- PLÄNE -->
 <div id="plans" class="tab active">
 <h2>Neuen Plan erstellen</h2>
-<input type="text" id="planName" placeholder="Planname">
-<button onclick="addPlan()">Plan hinzufügen</button>
+<input id="planName" placeholder="Planname">
+<button class="primary" onclick="addPlan()">Plan hinzufügen</button>
 
-<h2>Plan bearbeiten</h2>
-<select id="selectPlan" onchange="loadPlan()">
-<option value="">-- Plan wählen --</option>
-</select>
-<button style="background:#e74c3c" onclick="deletePlan()">❌ Plan löschen</button>
+<h3>Plan bearbeiten</h3>
+<select id="selectPlan" onchange="loadPlan()"><option value="">-- Plan wählen --</option></select>
+<button class="danger" onclick="deletePlan()">Plan löschen</button>
 
-<input type="text" id="exerciseName" placeholder="Übung">
-<input type="number" id="sets" placeholder="Sätze">
-<label><input type="checkbox" id="bodyweight"> Körpergewicht</label>
+<input id="exerciseName" placeholder="Übung">
+<input id="sets" type="number" placeholder="Sätze">
+<label class="small"><input id="bodyweight" type="checkbox"> Körpergewicht</label>
 <textarea id="notes" placeholder="Notizen zur Übung"></textarea>
 <button onclick="addExercise()">Übung hinzufügen</button>
 
@@ -78,22 +62,19 @@ button:hover { background: #45a049; }
 <!-- TRAINING -->
 <div id="training" class="tab">
 <h2>Training starten</h2>
-<select id="selectTrainingPlan" onchange="loadTrainingPlan()">
-<option value="">-- Plan wählen --</option>
-</select>
-<label>📅 Trainingsdatum:</label>
-<input type="date" id="trainingDate" value="">
+<select id="selectTrainingPlan" onchange="loadTrainingPlan()"><option value="">-- Plan wählen --</option></select>
+<label class="small">📅 Trainingsdatum</label>
+<input id="trainingDate" type="date">
 <div id="trainingExercises"></div>
-<button onclick="saveTraining()">Training speichern</button>
+<button class="primary" onclick="saveTraining()">Training speichern</button>
 </div>
 
 <!-- FORTSCHRITT -->
 <div id="progress" class="tab">
 <h2>Fortschritt (planübergreifend)</h2>
-<select id="exerciseSelectProgress" onchange="showProgressCrossPlans()">
-<option value="">-- Übung wählen --</option>
-</select>
-<canvas id="chart" width="400" height="200"></canvas>
+<select id="exerciseSelectProgress" onchange="onProgressSelectionChange()"><option value="">-- Übung wählen --</option></select>
+<select id="displayMode" onchange="renderProgressChart()"></select>
+<canvas id="chart" height="220"></canvas>
 </div>
 
 <!-- HISTORIE -->
@@ -107,210 +88,293 @@ button:hover { background: #45a049; }
 <h2>Alle Trainingspläne</h2>
 <div id="allPlans"></div>
 </div>
+
+<!-- EXPORT / IMPORT -->
+<div style="margin:12px 0">
+<h3>Backup</h3>
+<button onclick="exportData()" class="primary">Exportieren (JSON)</button>
+<input type="file" id="importFile" style="margin-top:6px" onchange="importData(this)">
+</div>
 </div>
 
-<!-- Modal -->
-<div id="editModal">
-  <div class="modal-content">
-    <h3>Übung bearbeiten</h3>
-    <label>Name</label><input type="text" id="editName">
-    <label>Sätze</label><input type="number" id="editSets">
-    <label><input type="checkbox" id="editBodyweight"> Körpergewicht</label>
-    <label>Notizen</label><textarea id="editNotes"></textarea>
-    <div class="modal-buttons">
-      <button onclick="saveExerciseEdit()">Speichern</button>
-      <button onclick="closeEditModal()">Abbrechen</button>
-    </div>
-  </div>
+<!-- Modal: Übung bearbeiten -->
+<div id="editModal" class="modal">
+<div class="card">
+<h3>Übung bearbeiten</h3>
+<div class="row"><label class="small">Name</label><input id="editName"></div>
+<div class="row"><label class="small">Sätze</label><input id="editSets" type="number"></div>
+<div class="row"><label class="small"><input id="editBodyweight" type="checkbox"> Körpergewicht</label></div>
+<div class="row"><label class="small">Notizen</label><textarea id="editNotes"></textarea></div>
+<div style="display:flex;gap:8px;justify-content:space-between">
+<button class="primary" onclick="saveExerciseEdit()">Speichern</button>
+<button onclick="closeEditModal()">Abbrechen</button>
+</div>
+</div>
 </div>
 
 <script>
-let plans = JSON.parse(localStorage.getItem('plans') || '{}');
-let chart;
-let editPlanName=null, editIndex=null;
+// --- Daten & Storage ---
+let plans=JSON.parse(localStorage.getItem('plans')||'{}');
+let chart=null;
+let editing={plan:null,index:null};
+function saveData(){ localStorage.setItem('plans',JSON.stringify(plans)); }
 
+// --- Tabs ---
 function showTab(id){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tabBtn'+id.charAt(0).toUpperCase()+id.slice(1)).classList.add('active');
-  if(id==='plans') renderPlans();
-  if(id==='progress') updateExerciseSelectProgress();
-  if(id==='history') renderHistory();
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+document.getElementById('btn'+id.charAt(0).toUpperCase()+id.slice(1)).classList.add('active');
+if(id==='plans') renderPlanSelectors();
+if(id==='progress') updateExerciseSelectProgress();
+if(id==='history') renderHistory();
+if(id==='overview') renderOverview();
 }
 
-function saveData(){ localStorage.setItem('plans', JSON.stringify(plans)); }
-function renderPlans(){
-  const sel=document.getElementById('selectPlan');
-  const selTrain=document.getElementById('selectTrainingPlan');
-  sel.innerHTML='<option value="">-- Plan wählen --</option>';
-  selTrain.innerHTML='<option value="">-- Plan wählen --</option>';
-  for(let p in plans){ sel.innerHTML+=`<option>${p}</option>`; selTrain.innerHTML+=`<option>${p}</option>`; }
-  renderOverview();
+// --- Planverwaltung ---
+function renderPlanSelectors(){
+const sel=document.getElementById('selectPlan');
+const selTrain=document.getElementById('selectTrainingPlan');
+sel.innerHTML='<option value="">-- Plan wählen --</option>';
+selTrain.innerHTML='<option value="">-- Plan wählen --</option>';
+for(let p in plans){
+sel.innerHTML+=`<option value="${p}">${p}</option>`;
+selTrain.innerHTML+=`<option value="${p}">${p}</option>`;
 }
-
-/* --- PLAN FUNKTIONEN --- */
+loadPlan();
+}
 function addPlan(){
-  const name=document.getElementById('planName').value.trim();
-  if(!name) return alert('Planname fehlt');
-  if(plans[name]) return alert('Plan existiert schon');
-  plans[name]={exercises:[],history:[]};
-  saveData(); renderPlans(); document.getElementById('planName').value='';
+const name=document.getElementById('planName').value.trim();
+if(!name) return alert('Planname fehlt');
+if(plans[name]) return alert('Plan existiert bereits');
+plans[name]={exercises:[],history:[]};
+saveData();
+document.getElementById('planName').value='';
+renderPlanSelectors();
 }
 function deletePlan(){
-  const plan=document.getElementById('selectPlan').value;
-  if(!plan) return alert('Kein Plan gewählt');
-  if(confirm(`Plan "${plan}" wirklich löschen?`)){
-    delete plans[plan];
-    saveData(); renderPlans();
-    document.getElementById('exercises').innerHTML='';
-  }
+const sel=document.getElementById('selectPlan').value;
+if(!sel) return alert('Kein Plan gewählt');
+if(!confirm(`Plan "${sel}" wirklich löschen?`)) return;
+delete plans[sel];
+saveData();
+renderPlanSelectors();
+document.getElementById('exercises').innerHTML='';
 }
 function loadPlan(){
-  const plan=document.getElementById('selectPlan').value;
-  const div=document.getElementById('exercises');
-  div.innerHTML='';
-  if(!plan) return;
-  plans[plan].exercises.forEach((ex,i)=>{
-    div.innerHTML+=`
-      <div class="exercise-item">
-        <b>${ex.name}</b> - ${ex.sets} Sätze${ex.bodyweight?' (Körpergewicht)':''}<br>
-        Notizen: ${ex.notes||''}<br>
-        <button onclick="openEditModal('${plan}',${i})">Bearbeiten</button>
-        <button onclick="deleteExercise('${plan}',${i})">Löschen</button>
-      </div>`;
-  });
+const plan=document.getElementById('selectPlan').value;
+const container=document.getElementById('exercises'); container.innerHTML='';
+if(!plan||!plans[plan]) return;
+plans[plan].exercises.forEach((ex,i)=>{
+const el=document.createElement('div'); el.className='exercise-item';
+el.innerHTML=`<strong>${ex.name}</strong> — ${ex.sets} Sätze ${ex.bodyweight? '(Körpergewicht)':''}
+<div style="margin-top:6px"><small>${ex.notes||''}</small></div>
+<div style="margin-top:8px;display:flex;gap:8px">
+<button onclick="openEditModal('${plan}',${i})">Bearbeiten</button>
+<button onclick="deleteExercise('${plan}',${i})" class="danger">Löschen</button>
+</div>`;
+container.appendChild(el);
+});
 }
 function addExercise(){
-  const p=document.getElementById('selectPlan').value;
-  if(!p) return alert('Plan wählen');
-  const n=document.getElementById('exerciseName').value.trim();
-  const s=parseInt(document.getElementById('sets').value);
-  const bw=document.getElementById('bodyweight').checked;
-  const notes=document.getElementById('notes').value.trim();
-  if(!n||!s) return alert('Übung und Sätze nötig');
-  plans[p].exercises.push({name:n,sets:s,bodyweight:bw,notes});
-  saveData(); loadPlan();
-  document.getElementById('exerciseName').value=''; document.getElementById('sets').value=''; document.getElementById('bodyweight').checked=false; document.getElementById('notes').value='';
+const plan=document.getElementById('selectPlan').value;
+if(!plan) return alert('Bitte Plan wählen');
+const name=document.getElementById('exerciseName').value.trim();
+const sets=parseInt(document.getElementById('sets').value);
+const bodyweight=document.getElementById('bodyweight').checked;
+const notes=document.getElementById('notes').value.trim();
+if(!name||!sets) return alert('Übung & Sätze erforderlich');
+plans[plan].exercises.push({name,sets,bodyweight,notes});
+saveData();
+document.getElementById('exerciseName').value='';
+document.getElementById('sets').value='';
+document.getElementById('bodyweight').checked=false;
+document.getElementById('notes').value='';
+loadPlan();
 }
-function deleteExercise(p,i){ if(confirm('Übung löschen?')){ plans[p].exercises.splice(i,1); saveData(); loadPlan(); }}
+function deleteExercise(plan,i){
+if(!confirm('Übung löschen?')) return;
+plans[plan].exercises.splice(i,1);
+saveData();
+loadPlan();
+}
 
-/* Modal */
-function openEditModal(p,i){ editPlanName=p; editIndex=i; const ex=plans[p].exercises[i];
-  document.getElementById('editName').value=ex.name; document.getElementById('editSets').value=ex.sets;
-  document.getElementById('editBodyweight').checked=ex.bodyweight; document.getElementById('editNotes').value=ex.notes||'';
-  document.getElementById('editModal').style.display='flex';
+// --- Edit Modal ---
+function openEditModal(plan,i){
+editing={plan,index:i};
+const ex=plans[plan].exercises[i];
+document.getElementById('editName').value=ex.name;
+document.getElementById('editSets').value=ex.sets;
+document.getElementById('editBodyweight').checked=ex.bodyweight;
+document.getElementById('editNotes').value=ex.notes||'';
+document.getElementById('editModal').style.display='flex';
 }
-function closeEditModal(){ document.getElementById('editModal').style.display='none'; }
+function closeEditModal(){ document.getElementById('editModal').style.display='none'; editing={plan:null,index:null}; }
 function saveExerciseEdit(){
-  const ex=plans[editPlanName].exercises[editIndex];
-  ex.name=document.getElementById('editName').value.trim();
-  ex.sets=parseInt(document.getElementById('editSets').value);
-  ex.bodyweight=document.getElementById('editBodyweight').checked;
-  ex.notes=document.getElementById('editNotes').value.trim();
-  saveData(); closeEditModal(); loadPlan();
+const ex=plans[editing.plan].exercises[editing.index];
+ex.name=document.getElementById('editName').value.trim();
+ex.sets=parseInt(document.getElementById('editSets').value)||ex.sets;
+ex.bodyweight=document.getElementById('editBodyweight').checked;
+ex.notes=document.getElementById('editNotes').value.trim();
+saveData();
+closeEditModal();
+loadPlan();
+updateExerciseSelectProgress();
 }
 
-/* TRAINING */
+// --- Training ---
 function loadTrainingPlan(){
-  const p=document.getElementById('selectTrainingPlan').value;
-  const div=document.getElementById('trainingExercises'); div.innerHTML='';
-  if(!p) return;
-  document.getElementById('trainingDate').value=new Date().toISOString().split('T')[0];
-  plans[p].exercises.forEach(ex=>{
-    let html=`<div class='exercise-item'><b>${ex.name}</b><br>`;
-    for(let i=1;i<=ex.sets;i++){
-      html+=`Satz ${i}: `;
-      if(!ex.bodyweight) html+=`<input type='number' placeholder='Gewicht' id='${ex.name}_w${i}' style='width:45%'> `;
-      html+=`<input type='number' placeholder='Wdh' id='${ex.name}_r${i}' style='width:45%'><br>`;
-    }
-    html+=`<textarea id='${ex.name}_note' placeholder='Notiz'></textarea></div>`;
-    div.innerHTML+=html;
-  });
+const plan=document.getElementById('selectTrainingPlan').value;
+const cont=document.getElementById('trainingExercises'); cont.innerHTML='';
+if(!plan||!plans[plan]) return;
+const today=new Date().toISOString().split('T')[0];
+if(!document.getElementById('trainingDate').value) document.getElementById('trainingDate').value=today;
+plans[plan].exercises.forEach((ex,exIdx)=>{
+const wrapper=document.createElement('div'); wrapper.className='exercise-item';
+let inner=`<strong>${ex.name}</strong> ${ex.bodyweight? '(Körpergewicht)':''}<div style="margin-top:6px">`;
+for(let s=1;s<=ex.sets;s++){
+if(!ex.bodyweight){
+inner+=`<div class="flex-row">Satz ${s}: <input type="number" id="w_${exIdx}_${s}" placeholder="Gewicht (kg)"><input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
+}else{
+inner+=`<div class="flex-row">Satz ${s}: <input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
 }
+}
+inner+=`<textarea id="note_${exIdx}" placeholder="Notizen (optional)">${ex.notes||''}</textarea></div>`;
+wrapper.innerHTML=inner; cont.appendChild(wrapper);
+});
+}
+
 function saveTraining(){
-  const p=document.getElementById('selectTrainingPlan').value;
-  if(!p) return alert('Plan wählen');
-  const date=document.getElementById('trainingDate').value;
-  const exercises=[];
-  plans[p].exercises.forEach(ex=>{
-    const setsData=[];
-    for(let i=1;i<=ex.sets;i++){
-      const w=!ex.bodyweight?parseFloat(document.getElementById(`${ex.name}_w${i}`).value)||0:0;
-      const r=parseInt(document.getElementById(`${ex.name}_r${i}`).value)||0;
-      setsData.push({weight:w,reps:r});
-    }
-    const note=document.getElementById(`${ex.name}_note`).value;
-    exercises.push({name:ex.name,setsData,note});
-  });
-  plans[p].history.push({date,exercises});
-  saveData();
-  alert('Training gespeichert!');
+const plan=document.getElementById('selectTrainingPlan').value;
+if(!plan) return alert('Bitte Plan wählen');
+const date=document.getElementById('trainingDate').value||new Date().toISOString().split('T')[0];
+const exercisesSaved=[];
+plans[plan].exercises.forEach((ex,exIdx)=>{
+const setsData=[];
+for(let s=1;s<=ex.sets;s++){
+const reps=parseInt(document.getElementById(`r_${exIdx}_${s}`)?.value)||0;
+const weight=ex.bodyweight?0:(parseFloat(document.getElementById(`w_${exIdx}_${s}`)?.value)||0);
+setsData.push({weight,reps});
+}
+const note=document.getElementById(`note_${exIdx}`)?.value||'';
+exercisesSaved.push({name:ex.name,setsData,note,bodyweight:ex.bodyweight});
+});
+plans[plan].history.push({date,exercises:exercisesSaved});
+saveData();
+alert('Training gespeichert!');
+updateExerciseSelectProgress();
+renderHistory();
 }
 
-/* FORTSCHRITT */
-function updateExerciseSelectProgress(){
-  const sel=document.getElementById('exerciseSelectProgress');
-  sel.innerHTML='<option value="">-- Übung wählen --</option>';
-  const names=new Set();
-  for(let p in plans){ plans[p].exercises.forEach(ex=>names.add(ex.name)); }
-  names.forEach(n=>sel.innerHTML+=`<option>${n}</option>`);
-}
-function showProgressCrossPlans(){
-  const name=document.getElementById('exerciseSelectProgress').value;
-  if(!name) return;
-  const data=[];
-  for(let p in plans){
-    plans[p].history.forEach(h=>{
-      h.exercises.forEach(ex=>{
-        if(ex.name===name){
-          const total=ex.setsData.reduce((a,s)=>a+(s.weight*s.reps),0);
-          data.push({date:h.date,total});
-        }
-      });
-    });
-  }
-  data.sort((a,b)=>new Date(a.date)-new Date(b.date));
-  if(chart) chart.destroy();
-  chart=new Chart(document.getElementById('chart'),{
-    type:'line',
-    data:{labels:data.map(d=>d.date),datasets:[{label:name,data:data.map(d=>d.total),fill:false,borderWidth:2}]},
-    options:{responsive:true,scales:{y:{beginAtZero:true,title:{display:true,text:'Wdh × Gewicht'}}}}
-  });
-}
-
-/* HISTORIE */
+// --- Historie ---
 function renderHistory(){
-  const div=document.getElementById('historyList'); div.innerHTML='';
-  for(let p in plans){
-    plans[p].history.forEach((h,idx)=>{
-      div.innerHTML+=`<div class='history-item'>
-        <b>${p}</b> - ${h.date}<br>
-        ${h.exercises.map(e=>`${e.name}: ${e.setsData.map(s=>`${s.weight}kg×${s.reps}`).join(', ')}`).join('<br>')}
-        <br><button style='background:#e74c3c' onclick="deleteHistory('${p}',${idx})">Löschen</button>
-      </div>`;
-    });
-  }
+const div=document.getElementById('historyList'); div.innerHTML='';
+let anyEntry=false;
+for(let p in plans){
+const hist=plans[p].history||[];
+hist.forEach((h,idx)=>{
+anyEntry=true;
+const card=document.createElement('div'); card.className='history-item';
+card.innerHTML=`<strong>${p}</strong> — ${h.date}<div style="margin-top:6px">`+
+h.exercises.map(e=>{
+return `<div><strong>${e.name}</strong>: `+
+e.setsData.map(s=>`${s.weight?(s.weight+'kg×'):''}${s.reps}w`).join(', ')+
+(e.note?`<div style="margin-top:4px"><small>${e.note}</small></div>`:'')+
+`</div>`;
+}).join('')+
+`</div><div style="margin-top:6px"><button class="danger" onclick="deleteHistory('${p}',${idx})">Eintrag löschen</button></div>`;
+div.appendChild(card);
+});
 }
+if(!anyEntry) div.innerHTML='<i>Keine Trainingshistorie vorhanden</i>';
+}
+
 function deleteHistory(plan,index){
-  if(confirm('Eintrag löschen?')){
-    plans[plan].history.splice(index,1);
-    saveData(); renderHistory();
-  }
+if(!confirm('Eintrag löschen?')) return;
+plans[plan].history.splice(index,1);
+saveData();
+renderHistory();
+updateExerciseSelectProgress();
 }
 
-/* ÜBERSICHT */
+// --- Fortschritt ---
+function updateExerciseSelectProgress(){
+const sel=document.getElementById('exerciseSelectProgress');
+sel.innerHTML='<option value="">-- Übung wählen --</option>';
+let exercisesSet=new Set();
+for(let p in plans){
+plans[p].exercises.forEach(e=>exercisesSet.add(e.name));
+}
+Array.from(exercisesSet).forEach(name=>{sel.innerHTML+=`<option value="${name}">${name}</option>`;});
+document.getElementById('displayMode').innerHTML='';
+const mode=document.getElementById('displayMode');
+mode.innerHTML=`<option value="sum">Summe Wdh×Gewicht</option>
+<option value="max">Max Gewicht</option>`;
+}
+function onProgressSelectionChange(){ renderProgressChart(); }
+function renderProgressChart(){
+const name=document.getElementById('exerciseSelectProgress').value;
+if(!name) return;
+const mode=document.getElementById('displayMode').value;
+let data=[],labels=[];
+for(let p in plans){
+plans[p].history.forEach(h=>{
+const ex=h.exercises.find(e=>e.name===name);
+if(ex){
+let y=0;
+if(mode==='sum'){ y=ex.setsData.reduce((a,s)=>a+s.weight*s.reps,0); }
+else{ y=Math.max(...ex.setsData.map(s=>s.weight)); }
+data.push(y); labels.push(h.date);
+}
+});
+}
+if(chart) chart.destroy();
+const ctx=document.getElementById('chart').getContext('2d');
+chart=new Chart(ctx,{type:'line',data:{labels, datasets:[{label:name,data,fill:false,borderColor:'#4caf50'}]}});
+}
+
+// --- Übersicht ---
 function renderOverview(){
-  const o=document.getElementById('allPlans');
-  o.innerHTML='';
-  for(let p in plans){
-    o.innerHTML+=`<h3>${p}</h3><ul>`+
-      plans[p].exercises.map(ex=>`<li>${ex.name} (${ex.sets} Sätze) ${ex.bodyweight?'(Körpergewicht)':''}<br>Notizen: ${ex.notes||''}</li>`).join('')+
-      '</ul>';
-  }
+const div=document.getElementById('allPlans'); div.innerHTML='';
+for(let p in plans){
+const card=document.createElement('div'); card.className='exercise-item';
+card.innerHTML=`<strong>${p}</strong> — ${plans[p].exercises.length} Übungen`;
+div.appendChild(card);
+}
 }
 
-renderPlans();
+// --- Import / Export ---
+function exportData(){
+const dataStr=JSON.stringify(plans,null,2);
+const blob=new Blob([dataStr],{type:"application/json"});
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a'); a.href=url; a.download='trainings_backup.json';
+document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+function importData(input){
+const file=input.files[0];
+if(!file) return;
+const reader=new FileReader();
+reader.onload=function(e){
+try{
+const imported=JSON.parse(e.target.result);
+if(!confirm('Importiert werden alle Pläne. Alte Daten gehen verloren. Fortfahren?')) return;
+plans=imported;
+saveData(); renderPlanSelectors(); renderHistory(); updateExerciseSelectProgress(); renderOverview();
+alert('Import erfolgreich!');
+}catch(err){ alert('Fehler beim Import: '+err.message); }
+};
+reader.readAsText(file);
+}
+
+// --- Helfer ---
+function escapeHtml(str){return str.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function escapeJS(str){return str.replace(/'/g,"\\'");}
+
+renderPlanSelectors();
+updateExerciseSelectProgress();
+renderHistory();
+renderOverview();
 </script>
 </body>
 </html>
