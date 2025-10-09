@@ -48,7 +48,8 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 
 <h3>Plan bearbeiten</h3>
 <select id="selectPlan" onchange="loadPlan()"><option value="">-- Plan wählen --</option></select>
-<button class="danger" onclick="deletePlan()">Plan löschen</button>
+<button class="danger" onclick="openDeleteModal()">Plan löschen</button>
+
 
 <h3>Plan umbenennen</h3>
 <input id="renamePlanName" placeholder="Neuer Planname">
@@ -189,6 +190,35 @@ function renamePlan() {
   alert(`Plan "${oldName}" wurde in "${newName}" umbenannt.`);
 }
 
+// --- Plan löschen (Modal) ---
+let planToDelete = null;
+
+function openDeleteModal() {
+  const sel = document.getElementById('selectPlan').value;
+  if (!sel) return alert('Bitte zuerst einen Plan auswählen.');
+  planToDelete = sel;
+  document.getElementById('deletePlanText').innerHTML =
+    `Möchtest du den Plan <strong>"${sel}"</strong> wirklich löschen?`;
+  document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').style.display = 'none';
+  planToDelete = null;
+}
+
+function deletePlanConfirmed() {
+  if (!planToDelete) return;
+  delete plans[planToDelete];
+  saveData();
+  renderPlanSelectors();
+  document.getElementById('exercises').innerHTML = '';
+  closeDeleteModal();
+  alert(`Plan "${planToDelete}" wurde gelöscht.`);
+}
+
+
+
 
 function loadPlan(){
 const plan=document.getElementById('selectPlan').value;
@@ -257,6 +287,19 @@ loadPlan();
 updateExerciseSelectProgress();
 }
 
+// -- Modal: Plan löschen --
+<div id="deleteModal" class="modal">
+  <div class="card">
+    <h3>Plan löschen</h3>
+    <p id="deletePlanText">Bist du sicher, dass du diesen Plan löschen möchtest?</p>
+    <div style="display:flex;gap:8px;justify-content:space-between">
+      <button class="danger" onclick="deletePlanConfirmed()">Ja, löschen</button>
+      <button onclick="closeDeleteModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+
 // --- Training ---
 function loadTrainingPlan(){
 const plan=document.getElementById('selectTrainingPlan').value;
@@ -286,6 +329,7 @@ function saveTraining() {
   const date = document.getElementById('trainingDate').value || new Date().toISOString().split('T')[0];
   const exercisesSaved = [];
 
+  // Für jede Übung im Plan
   plans[plan].exercises.forEach((ex, exIdx) => {
     const setsData = [];
 
@@ -293,7 +337,7 @@ function saveTraining() {
       const reps = parseInt(document.getElementById(`r_${exIdx}_${s}`)?.value) || 0;
       const weight = ex.bodyweight ? 0 : (parseFloat(document.getElementById(`w_${exIdx}_${s}`)?.value) || 0);
 
-      // Nur Sätze speichern, die tatsächlich eingegeben wurden
+      // Nur speichern, wenn es echte Werte gibt
       if (reps > 0 || weight > 0) {
         setsData.push({ weight, reps });
       }
@@ -301,7 +345,6 @@ function saveTraining() {
 
     const note = document.getElementById(`note_${exIdx}`)?.value || '';
 
-    // Nur speichern, wenn es mindestens 1 Satz gibt
     if (setsData.length > 0) {
       exercisesSaved.push({
         name: ex.name,
@@ -313,10 +356,10 @@ function saveTraining() {
   });
 
   if (exercisesSaved.length === 0) {
-    return alert('Keine Wiederholungen oder Gewichte eingegeben – nichts gespeichert.');
+    return alert('Keine Wiederholungen oder Gewichte eingegeben – Training wurde nicht gespeichert.');
   }
 
-  // Wenn noch kein History-Array existiert:
+  // Falls kein history-Array vorhanden, anlegen
   if (!plans[plan].history) plans[plan].history = [];
 
   plans[plan].history.push({ date, exercises: exercisesSaved });
@@ -324,9 +367,11 @@ function saveTraining() {
 
   alert('Training gespeichert!');
 
-  updateExerciseSelectProgress();
+  // Tabs aktualisieren
   renderHistory();
+  updateExerciseSelectProgress();
 }
+
 
 
 
