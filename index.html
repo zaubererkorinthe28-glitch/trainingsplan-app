@@ -21,7 +21,16 @@ button.primary { background:#4caf50; color:#fff; border:0; cursor:pointer; }
 .flex-row { display:flex; gap:8px; align-items:center; }
 .flex-row input { flex:1; }
 .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); justify-content:center; align-items:center; z-index:9999; }
-.modal .card { background:#fff; padding:16px; border-radius:10px; width:92%; max-width:720px; }
+.modal .card {
+  background:#fff;
+  padding:16px;
+  border-radius:10px;
+  width:92%;
+  max-width:420px;
+  max-height:90vh;     /* Fensterhöhe begrenzen */
+  overflow-y:auto;     /* Scrollen aktivieren */
+}
+
 .modal .row { margin-bottom:8px; }
 .history-item { background:#fff; border:1px solid #ddd; border-radius:8px; padding:8px; margin:8px 0; }
 .danger { background:#e74c3c; color:#fff; border:0; cursor:pointer; }
