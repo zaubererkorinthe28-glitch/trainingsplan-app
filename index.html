@@ -50,6 +50,10 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 <select id="selectPlan" onchange="loadPlan()"><option value="">-- Plan wählen --</option></select>
 <button class="danger" onclick="deletePlan()">Plan löschen</button>
 
+<h3>Plan umbenennen</h3>
+<input id="renamePlanName" placeholder="Neuer Planname">
+<button onclick="renamePlan()">Plan umbenennen</button>
+
 <input id="exerciseName" placeholder="Übung">
 <input id="sets" type="number" placeholder="Sätze">
 <label class="small"><input id="bodyweight" type="checkbox"> Körpergewicht</label>
@@ -166,6 +170,26 @@ renderPlanSelectors();
 document.getElementById('exercises').innerHTML='';
 }
 
+function renamePlan() {
+  const oldName = document.getElementById('selectPlan').value;
+  const newName = document.getElementById('renamePlanName').value.trim();
+
+  if (!oldName) return alert('Bitte wähle zuerst einen Plan aus.');
+  if (!newName) return alert('Neuer Name fehlt.');
+  if (plans[newName]) return alert('Ein Plan mit diesem Namen existiert bereits.');
+
+  // Plan kopieren und unter neuem Namen speichern
+  plans[newName] = JSON.parse(JSON.stringify(plans[oldName]));
+  delete plans[oldName];
+  saveData();
+
+  // UI aktualisieren
+  document.getElementById('renamePlanName').value = '';
+  renderPlanSelectors();
+  alert(`Plan "${oldName}" wurde in "${newName}" umbenannt.`);
+}
+
+
 function loadPlan(){
 const plan=document.getElementById('selectPlan').value;
 const container=document.getElementById('exercises'); container.innerHTML='';
@@ -255,27 +279,57 @@ wrapper.innerHTML=inner; cont.appendChild(wrapper);
 });
 }
 
-function saveTraining(){
-const plan=document.getElementById('selectTrainingPlan').value;
-if(!plan) return alert('Bitte Plan wählen');
-const date=document.getElementById('trainingDate').value||new Date().toISOString().split('T')[0];
-const exercisesSaved=[];
-plans[plan].exercises.forEach((ex,exIdx)=>{
-const setsData=[];
-for(let s=1;s<=ex.sets;s++){
-const reps=parseInt(document.getElementById(`r_${exIdx}_${s}`)?.value)||0;
-const weight=ex.bodyweight?0:(parseFloat(document.getElementById(`w_${exIdx}_${s}`)?.value)||0);
-setsData.push({weight,reps});
+function saveTraining() {
+  const plan = document.getElementById('selectTrainingPlan').value;
+  if (!plan) return alert('Bitte Plan wählen');
+
+  const date = document.getElementById('trainingDate').value || new Date().toISOString().split('T')[0];
+  const exercisesSaved = [];
+
+  plans[plan].exercises.forEach((ex, exIdx) => {
+    const setsData = [];
+
+    for (let s = 1; s <= ex.sets; s++) {
+      const reps = parseInt(document.getElementById(`r_${exIdx}_${s}`)?.value) || 0;
+      const weight = ex.bodyweight ? 0 : (parseFloat(document.getElementById(`w_${exIdx}_${s}`)?.value) || 0);
+
+      // Nur Sätze speichern, die tatsächlich eingegeben wurden
+      if (reps > 0 || weight > 0) {
+        setsData.push({ weight, reps });
+      }
+    }
+
+    const note = document.getElementById(`note_${exIdx}`)?.value || '';
+
+    // Nur speichern, wenn es mindestens 1 Satz gibt
+    if (setsData.length > 0) {
+      exercisesSaved.push({
+        name: ex.name,
+        setsData,
+        note,
+        bodyweight: ex.bodyweight
+      });
+    }
+  });
+
+  if (exercisesSaved.length === 0) {
+    return alert('Keine Wiederholungen oder Gewichte eingegeben – nichts gespeichert.');
+  }
+
+  // Wenn noch kein History-Array existiert:
+  if (!plans[plan].history) plans[plan].history = [];
+
+  plans[plan].history.push({ date, exercises: exercisesSaved });
+  saveData();
+
+  alert('Training gespeichert!');
+
+  updateExerciseSelectProgress();
+  renderHistory();
 }
-const note=document.getElementById(`note_${exIdx}`)?.value||'';
-exercisesSaved.push({name:ex.name,setsData,note,bodyweight:ex.bodyweight});
-});
-plans[plan].history.push({date,exercises:exercisesSaved});
-saveData();
-alert('Training gespeichert!');
-updateExerciseSelectProgress();
-renderHistory();
-}
+
+
+
 
 // --- Historie ---
 function renderHistory(){
@@ -381,6 +435,12 @@ renderPlanSelectors();
 updateExerciseSelectProgress();
 renderHistory();
 renderOverview();
+if (Object.keys(plans).length === 0) {
+  console.log("Keine Pläne vorhanden – bitte neuen Plan erstellen.");
+} else {
+  renderHistory();
+  updateExerciseSelectProgress();
+}
 </script>
 </body>
 </html>
