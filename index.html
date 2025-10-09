@@ -136,16 +136,19 @@ let planToDelete = null;
 
 function saveData() { localStorage.setItem('plans', JSON.stringify(plans)); }
 
-function showTab(id) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('btn' + id.charAt(0).toUpperCase() + id.slice(1)).classList.add('active');
-  if (id === 'plans') renderPlanSelectors();
-  if (id === 'progress') updateExerciseSelectProgress();
-  if (id === 'history') renderHistory();
-  if (id === 'overview') renderOverview();
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn'+id.charAt(0).toUpperCase()+id.slice(1)).classList.add('active');
+
+  if(id==='plans') renderPlanSelectors();
+  if(id==='progress') updateExerciseSelectProgress(); // hier
+  if(id==='history') renderHistory();
+  if(id==='overview') renderOverview();
 }
+
+
 
 // --- Planverwaltung ---
 function renderPlanSelectors() {
@@ -420,38 +423,97 @@ function deleteHistory(plan, index) {
 }
 
 // --- Fortschritt ---
+
 function updateExerciseSelectProgress() {
   const sel = document.getElementById('exerciseSelectProgress');
   sel.innerHTML = '<option value="">-- Übung wählen --</option>';
-  let exercisesSet = new Set();
-  for (let p in plans) {
-    plans[p].exercises.forEach(e => exercisesSet.add(e.name));
+
+  const exercisesSet = new Set();
+  for (let planName in plans) {
+    (plans[planName].exercises || []).forEach(ex => exercisesSet.add(ex.name));
   }
-  Array.from(exercisesSet).forEach(name => { sel.innerHTML += `<option value="${name}">${name}</option>`; });
-  renderProgressChart();
+
+  Array.from(exercisesSet).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+
+  // Auto-render für die erste Übung, falls vorhanden
+  if (sel.value) renderProgressChart();
 }
 
+
+let chart; // globale Chart-Variable
+
 function renderProgressChart() {
-  const name = document.getElementById('exerciseSelectProgress').value;
-  if (!name) return;
+  const select = document.getElementById('exerciseSelectProgress');
+  const name = select.value;
+  if (!name) {
+    if (chart) chart.destroy();
+    const ctx = document.getElementById('chart').getContext('2d');
+    ctx.clearRect(0, 0, 500, 300);
+    ctx.font = '16px Arial';
+    ctx.fillText('Bitte Übung auswählen', 40, 150);
+    return;
+  }
+
   const mode = document.getElementById('displayMode').value;
-  let data = [], labels = [];
-  for (let p in plans) {
-    plans[p].history.forEach(h => {
-      const ex = h.exercises.find(e => e.name === name);
-      if (ex) {
-        let y = 0;
-        if (mode === 'sum') y = ex.setsData.reduce((a, s) => a + s.weight * s.reps, 0);
-        else y = Math.max(...ex.setsData.map(s => s.weight));
-        data.push(y); labels.push(h.date);
+  const labels = [];
+  const data = [];
+
+  for (let planName in plans) {
+    const history = plans[planName].history || [];
+    history.forEach(entry => {
+      const ex = entry.exercises.find(e => e.name === name);
+      if (!ex || !ex.setsData || ex.setsData.length === 0) return;
+
+      let value = 0;
+      if (mode === 'sum') {
+        value = ex.setsData.reduce((sum, s) => sum + s.weight * s.reps, 0);
+      } else {
+        value = Math.max(...ex.setsData.map(s => s.weight));
       }
+
+      labels.push(`${entry.date} (${planName})`);
+      data.push(value);
     });
   }
-  if (chart) chart.destroy();
+
   const ctx = document.getElementById('chart').getContext('2d');
-  if (data.length === 0) { ctx.clearRect(0, 0, 500, 300); return; }
-  chart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: name, data, fill: false, borderColor: '#4caf50' }] }, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
+  if (chart) chart.destroy();
+
+  if (data.length === 0) {
+    ctx.clearRect(0, 0, 500, 300);
+    ctx.font = '16px Arial';
+    ctx.fillText('Keine Trainingsdaten für diese Übung vorhanden', 40, 150);
+    return;
+  }
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: name,
+        data: data,
+        borderColor: '#4caf50',
+        borderWidth: 2,
+        fill: false,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: mode === 'sum' ? 'Gesamtvolumen (kg×Wdh)' : 'Max Gewicht (kg)' } },
+        x: { title: { display: true, text: 'Datum / Plan' } }
+      }
+    }
+  });
 }
+
 
 // --- Übersicht ---
 function renderOverview() {
