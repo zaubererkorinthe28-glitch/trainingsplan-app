@@ -97,6 +97,14 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 <div id="allPlans"></div>
 </div>
 
+<!-- Debug-Fenster -->
+<div style="margin-top:20px; padding:10px; background:#fff; border:1px solid #ccc; border-radius:6px;">
+  <h4>Debug Daten</h4>
+  <button onclick="showDebugData()">Daten anzeigen</button>
+  <pre id="debugOutput" style="white-space:pre-wrap; max-height:200px; overflow:auto;"></pre>
+</div>
+
+
 <!-- EXPORT / IMPORT -->
 <div style="margin:12px 0">
 <h3>Backup</h3>
@@ -353,29 +361,55 @@ function saveTraining() {
 
 
 // --- Historie ---
+
 function renderHistory() {
-  const div = document.getElementById('historyList');
-  div.innerHTML = '';
-  let anyEntry = false;
-  for (let p in plans) {
-    const hist = plans[p].history || [];
-    hist.forEach((h, idx) => {
-      anyEntry = true;
-      const card = document.createElement('div');
-      card.className = 'history-item';
-      card.innerHTML = `<strong>${p}</strong> — ${h.date}<div style="margin-top:6px">` +
-        h.exercises.map(e => {
-          return `<div><strong>${e.name}</strong>: ` +
-            (e.setsData.map(s => `${s.weight ? (s.weight + 'kg×') : ''}${s.reps}w`).join(', ') || '-') +
-            (e.note ? `<div style="margin-top:4px"><small>${e.note}</small></div>` : '') +
-            `</div>`;
-        }).join('') +
-        `</div><div style="margin-top:6px"><button class="danger" onclick="deleteHistory('${p}',${idx})">Eintrag löschen</button></div>`;
-      div.appendChild(card);
+  const historyDiv = document.getElementById('historyList');
+  historyDiv.innerHTML = '';
+
+  let entriesFound = false;
+
+  for (let planName in plans) {
+    const history = plans[planName].history || [];
+    if (history.length === 0) continue;
+
+    entriesFound = true;
+
+    const planHeader = document.createElement('h3');
+    planHeader.textContent = `📘 ${planName}`;
+    historyDiv.appendChild(planHeader);
+
+    history.slice().reverse().forEach((session, index) => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = `<strong>${session.date}</strong>`;
+
+      if (!session.exercises || session.exercises.length === 0) {
+        item.innerHTML += `<div style="margin-left:10px;">Keine Übungen</div>`;
+      } else {
+        session.exercises.forEach(ex => {
+          const setsText = ex.setsData && ex.setsData.length
+            ? ex.setsData.map(s => `${s.weight}kg × ${s.reps}`).join(', ')
+            : '–';
+          const note = ex.note ? `<div><em>${ex.note}</em></div>` : '';
+          item.innerHTML += `
+            <div style="margin-left:10px;">
+              <strong>${ex.name}</strong>: ${setsText} ${note}
+            </div>`;
+        });
+      }
+
+      // Löschen-Button für diese Session
+      item.innerHTML += `<button class="danger" style="margin-top:5px;" onclick="deleteHistory('${planName}',${history.length - 1 - index})">Eintrag löschen</button>`;
+
+      historyDiv.appendChild(item);
     });
   }
-  if (!anyEntry) div.innerHTML = '<i>Keine Trainingshistorie vorhanden</i>';
+
+  if (!entriesFound) {
+    historyDiv.innerHTML = '<p>Keine Trainingshistorie vorhanden.</p>';
+  }
 }
+
 
 function deleteHistory(plan, index) {
   if (!confirm('Eintrag löschen?')) return;
@@ -460,6 +494,13 @@ function importData(input) {
 window.addEventListener('click', function(e) {
   if (e.target.classList.contains('modal')) e.target.style.display = 'none';
 });
+
+function showDebugData() {
+  const output = document.getElementById('debugOutput');
+  output.textContent = JSON.stringify(plans, null, 2);
+}
+
+
 
 // --- Initialisierung ---
 renderPlanSelectors();
