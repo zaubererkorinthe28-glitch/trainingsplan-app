@@ -97,13 +97,6 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 <div id="allPlans"></div>
 </div>
 
-<!-- Debug-Fenster -->
-<div style="margin-top:20px; padding:10px; background:#fff; border:1px solid #ccc; border-radius:6px;">
-  <h4>Debug Daten</h4>
-  <button onclick="showDebugData()">Daten anzeigen</button>
-  <pre id="debugOutput" style="white-space:pre-wrap; max-height:200px; overflow:auto;"></pre>
-</div>
-
 
 <!-- EXPORT / IMPORT -->
 <div style="margin:12px 0">
@@ -557,10 +550,6 @@ window.addEventListener('click', function(e) {
   if (e.target.classList.contains('modal')) e.target.style.display = 'none';
 });
 
-function showDebugData() {
-  const output = document.getElementById('debugOutput');
-  output.textContent = JSON.stringify(plans, null, 2);
-}
 
 
 
