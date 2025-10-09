@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Trainings-App</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 body { margin:0; font-family:-apple-system,Arial,Helvetica,sans-serif; background:#f0f2f5; color:#222; }
-.container { max-width:520px; margin:18px auto; padding:16px; }
+.container { max-width:720px; margin:18px auto; padding:16px; }
 header { background:#4caf50; color:#fff; border-radius:10px; padding:12px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.12); }
 h1 { margin:0; font-size:20px; }
 .nav { display:flex; gap:6px; margin:12px 0; flex-wrap:wrap; }
@@ -20,13 +20,17 @@ button.primary { background:#4caf50; color:#fff; border:0; cursor:pointer; }
 .exercise-item { background:#fff; border:1px solid #ddd; padding:8px; border-radius:8px; margin:6px 0; }
 .flex-row { display:flex; gap:8px; align-items:center; }
 .flex-row input { flex:1; }
-.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); justify-content:center; align-items:center; z-index:20; }
-.modal .card { background:#fff; padding:16px; border-radius:10px; width:92%; max-width:420px; }
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); justify-content:center; align-items:center; z-index:9999; }
+.modal .card { background:#fff; padding:16px; border-radius:10px; width:92%; max-width:720px; }
 .modal .row { margin-bottom:8px; }
 .history-item { background:#fff; border:1px solid #ddd; border-radius:8px; padding:8px; margin:8px 0; }
 .danger { background:#e74c3c; color:#fff; border:0; cursor:pointer; }
-label.small { font-size:13px; color:#555; }
-canvas { background:#fff; border-radius:8px; padding:8px; }
+label.small { font-size:13px; color:#555; display:block; margin:6px 0; }
+canvas { background:#fff; border-radius:8px; padding:8px; display:block; width:100% !important; height:320px !important; }
+.small-btn { padding:6px 8px; font-size:14px; border-radius:6px; }
+.row-flex { display:flex; gap:8px; }
+.col { flex:1; }
+.note { font-size:13px; color:#555; margin-top:6px; }
 </style>
 </head>
 <body>
@@ -48,12 +52,10 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 
 <h3>Plan bearbeiten</h3>
 <select id="selectPlan" onchange="loadPlan()"><option value="">-- Plan wählen --</option></select>
-<button class="danger" onclick="openDeleteModal()">Plan löschen</button>
-
-
-<h3>Plan umbenennen</h3>
-<input id="renamePlanName" placeholder="Neuer Planname">
-<button onclick="renamePlan()">Plan umbenennen</button>
+<div style="display:flex; gap:6px;">
+<button onclick="openRenameModal()" style="flex:1;">Plan umbenennen</button>
+<button class="danger" onclick="openDeleteModal()" style="flex:1;">Plan löschen</button>
+</div>
 
 <input id="exerciseName" placeholder="Übung">
 <input id="sets" type="number" placeholder="Sätze">
@@ -77,12 +79,18 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 <!-- FORTSCHRITT -->
 <div id="progress" class="tab">
 <h2>Fortschritt (planübergreifend)</h2>
+<div class="row-flex">
+<div class="col">
 <select id="exerciseSelectProgress" onchange="renderProgressChart()"><option value="">-- Übung wählen --</option></select>
+</div>
+<div style="width:220px">
 <select id="displayMode" onchange="renderProgressChart()">
-<option value="sum">Summe Wdh×Gewicht</option>
-<option value="max">Max Gewicht</option>
+<option value="sum">Summe (Wdh×Gewicht / Wdh)</option>
+<option value="max">Max (Gewicht / Wdh)</option>
 </select>
-<canvas id="chart" height="220"></canvas>
+</div>
+</div>
+<canvas id="chart"></canvas>
 </div>
 
 <!-- HISTORIE -->
@@ -95,15 +103,12 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 <div id="overview" class="tab">
 <h2>Alle Trainingspläne</h2>
 <div id="allPlans"></div>
-</div>
-
-
-<!-- EXPORT / IMPORT -->
-<div style="margin:12px 0">
+<br>
 <h3>Backup</h3>
 <button onclick="exportData()" class="primary">Exportieren (JSON)</button>
 <input type="file" id="importFile" style="margin-top:6px" onchange="importData(this)">
 </div>
+
 </div>
 
 <!-- Modal: Übung bearbeiten -->
@@ -121,85 +126,152 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 </div>
 </div>
 
+<!-- Modal: Plan umbenennen -->
+<div id="renameModal" class="modal">
+<div class="card">
+<h3>Plan umbenennen</h3>
+<div class="row"><label class="small">Neuer Name</label><input id="renamePlanInput" placeholder="Neuer Planname"></div>
+<div style="display:flex;gap:8px;justify-content:space-between">
+<button class="primary" onclick="renamePlan()">Speichern</button>
+<button onclick="closeRenameModal()">Abbrechen</button>
+</div>
+</div>
+</div>
+
+<!-- Modal: Plan löschen -->
+<div id="deleteModal" class="modal">
+<div class="card">
+<h3>Plan löschen</h3>
+<p id="deletePlanText"></p>
+<div style="display:flex;gap:8px;justify-content:space-between">
+<button class="danger" onclick="deletePlanConfirmed()">Ja, löschen</button>
+<button onclick="closeDeleteModal()">Abbrechen</button>
+</div>
+</div>
+</div>
+
+<!-- Modal: Historien-Eintrag bearbeiten -->
+<div id="editHistoryModal" class="modal">
+<div class="card">
+<h3>Historien-Eintrag bearbeiten</h3>
+<div id="historyEditContent"></div>
+<div style="display:flex;gap:8px;justify-content:space-between;margin-top:10px;">
+<button class="primary" onclick="saveHistoryEdit()">Speichern</button>
+<button onclick="closeEditHistoryModal()">Abbrechen</button>
+</div>
+</div>
+</div>
+
+<!-- Debug -->
+<div style="max-width:720px;margin:12px auto; padding:10px; background:#fff; border:1px solid #ccc; border-radius:6px;">
+<h4>Debug Daten</h4>
+<div style="display:flex;gap:8px;">
+<button onclick="showDebugData()" class="small-btn">Daten anzeigen</button>
+<button onclick="clearDebug()" class="small-btn">localStorage leeren</button>
+</div>
+<pre id="debugOutput" style="white-space:pre-wrap; max-height:240px; overflow:auto; margin-top:8px;"></pre>
+</div>
+
 <script>
-let plans = JSON.parse(localStorage.getItem('plans') || '{}');
+// --- Daten & Hilfsvariablen ---
+let plans = JSON.parse(localStorage.getItem('plans')||'{}');
 let chart = null;
-let editing = { plan: null, index: null };
+let editing = {plan:null,index:null};
+let historyEditing = {plan:null,index:null};
 let planToDelete = null;
 
-function saveData() { localStorage.setItem('plans', JSON.stringify(plans)); }
+// --- Storage ---
+function saveData(){ localStorage.setItem('plans',JSON.stringify(plans)); }
 
+// --- Tabs ---
 function showTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('btn'+id.charAt(0).toUpperCase()+id.slice(1)).classList.add('active');
-
   if(id==='plans') renderPlanSelectors();
-  if(id==='progress') updateExerciseSelectProgress(); // hier
+  if(id==='progress') updateExerciseSelectProgress();
   if(id==='history') renderHistory();
   if(id==='overview') renderOverview();
 }
 
-
-
 // --- Planverwaltung ---
-function renderPlanSelectors() {
-  const sel = document.getElementById('selectPlan');
-  const selTrain = document.getElementById('selectTrainingPlan');
-  sel.innerHTML = '<option value="">-- Plan wählen --</option>';
-  selTrain.innerHTML = '<option value="">-- Plan wählen --</option>';
-  for (let p in plans) {
-    sel.innerHTML += `<option value="${p}">${p}</option>`;
-    selTrain.innerHTML += `<option value="${p}">${p}</option>`;
+function renderPlanSelectors(){
+  const sel=document.getElementById('selectPlan');
+  const selTrain=document.getElementById('selectTrainingPlan');
+  sel.innerHTML='<option value="">-- Plan wählen --</option>';
+  selTrain.innerHTML='<option value="">-- Plan wählen --</option>';
+  for(let p in plans){
+    sel.innerHTML+=`<option value="${p}">${p}</option>`;
+    selTrain.innerHTML+=`<option value="${p}">${p}</option>`;
   }
   loadPlan();
 }
 
-function addPlan() {
-  const name = document.getElementById('planName').value.trim();
-  if (!name) return alert('Planname fehlt');
-  if (plans[name]) return alert('Plan existiert bereits');
-  plans[name] = { exercises: [], history: [] };
+function addPlan(){
+  const name=document.getElementById('planName').value.trim();
+  if(!name) return alert('Planname fehlt');
+  if(plans[name]) return alert('Plan existiert bereits');
+  plans[name]={exercises:[],history:[]};
   saveData();
-  document.getElementById('planName').value = '';
+  document.getElementById('planName').value='';
   renderPlanSelectors();
+  renderOverview();
 }
 
-function openDeleteModal() {
-  const sel = document.getElementById('selectPlan').value;
-  if (!sel) return alert('Bitte zuerst einen Plan auswählen.');
+function openDeleteModal(){
+  const sel=document.getElementById('selectPlan').value;
+  if(!sel) return alert('Bitte zuerst einen Plan auswählen.');
   planToDelete = sel;
-  document.getElementById('deletePlanText').innerHTML =
-    `Möchtest du den Plan <strong>"${sel}"</strong> wirklich löschen?`;
-  document.getElementById('deleteModal').style.display = 'flex';
+  document.getElementById('deletePlanText').innerHTML = `Möchtest du den Plan <strong>"${sel}"</strong> wirklich löschen?`;
+  document.getElementById('deleteModal').style.display='flex';
 }
 
-function closeDeleteModal() {
-  document.getElementById('deleteModal').style.display = 'none';
-  planToDelete = null;
-}
+function closeDeleteModal(){ document.getElementById('deleteModal').style.display='none'; planToDelete=null; }
 
-function deletePlanConfirmed() {
-  if (!planToDelete) return;
+function deletePlanConfirmed(){
+  if(!planToDelete) return;
   delete plans[planToDelete];
   saveData();
   renderPlanSelectors();
-  document.getElementById('exercises').innerHTML = '';
+  document.getElementById('exercises').innerHTML='';
   closeDeleteModal();
-  alert(`Plan "${planToDelete}" wurde gelöscht.`);
+  renderOverview();
+  alert(`Plan "${planToDelete}" gelöscht.`);
 }
 
-function loadPlan() {
-  const plan = document.getElementById('selectPlan').value;
-  const container = document.getElementById('exercises');
-  container.innerHTML = '';
-  if (!plan || !plans[plan]) return;
-  plans[plan].exercises.forEach((ex, i) => {
-    const el = document.createElement('div');
-    el.className = 'exercise-item';
-    el.innerHTML = `<strong>${ex.name}</strong> — ${ex.sets} Sätze ${ex.bodyweight ? '(Körpergewicht)' : ''}
-    <div style="margin-top:6px"><small>${ex.notes || ''}</small></div>
+// --- Rename Plan Modal ---
+function openRenameModal(){
+  const sel=document.getElementById('selectPlan').value;
+  if(!sel) return alert('Bitte zuerst einen Plan auswählen.');
+  document.getElementById('renamePlanInput').value = sel;
+  document.getElementById('renameModal').style.display='flex';
+  editing.plan = sel;
+}
+function closeRenameModal(){ document.getElementById('renameModal').style.display='none'; editing.plan=null; }
+function renamePlan(){
+  const newName = document.getElementById('renamePlanInput').value.trim();
+  if(!editing.plan) return alert('Kein Plan ausgewählt.');
+  if(!newName) return alert('Name darf nicht leer sein');
+  if(plans[newName] && newName !== editing.plan) return alert('Ein Plan mit diesem Namen existiert bereits.');
+  plans[newName] = plans[editing.plan];
+  if(newName !== editing.plan) delete plans[editing.plan];
+  saveData();
+  renderPlanSelectors();
+  closeRenameModal();
+  renderOverview();
+  alert(`Plan "${editing.plan}" wurde in "${newName}" umbenannt.`);
+}
+
+// --- Übungen verwalten ---
+function loadPlan(){
+  const plan=document.getElementById('selectPlan').value;
+  const container=document.getElementById('exercises'); container.innerHTML='';
+  if(!plan||!plans[plan]) return;
+  plans[plan].exercises.forEach((ex,i)=>{
+    const el=document.createElement('div'); el.className='exercise-item';
+    el.innerHTML=`<strong>${ex.name}</strong> — ${ex.sets} Sätze ${ex.bodyweight? '(Körpergewicht)':''}
+    <div style="margin-top:6px"><small>${ex.notes||''}</small></div>
     <div style="margin-top:8px;display:flex;gap:8px">
       <button onclick="openEditModal('${plan}',${i})">Bearbeiten</button>
       <button onclick="deleteExercise('${plan}',${i})" class="danger">Löschen</button>
@@ -208,359 +280,337 @@ function loadPlan() {
   });
 }
 
-function addExercise() {
-  const plan = document.getElementById('selectPlan').value;
-  if (!plan) return alert('Bitte Plan wählen');
-  const name = document.getElementById('exerciseName').value.trim();
-  const sets = parseInt(document.getElementById('sets').value);
-  const bodyweight = document.getElementById('bodyweight').checked;
-  const notes = document.getElementById('notes').value.trim();
-  if (!name || !sets) return alert('Übung & Sätze erforderlich');
-  plans[plan].exercises.push({ name, sets, bodyweight, notes });
+function addExercise(){
+  const plan=document.getElementById('selectPlan').value;
+  if(!plan) return alert('Bitte Plan wählen');
+  const name=document.getElementById('exerciseName').value.trim();
+  const sets=parseInt(document.getElementById('sets').value);
+  const bodyweight=document.getElementById('bodyweight').checked;
+  const notes=document.getElementById('notes').value.trim();
+  if(!name||!sets) return alert('Übung & Sätze erforderlich');
+  plans[plan].exercises.push({name,sets,bodyweight,notes});
   saveData();
-  document.getElementById('exerciseName').value = '';
-  document.getElementById('sets').value = '';
-  document.getElementById('bodyweight').checked = false;
-  document.getElementById('notes').value = '';
+  document.getElementById('exerciseName').value=''; document.getElementById('sets').value=''; document.getElementById('bodyweight').checked=false; document.getElementById('notes').value='';
   loadPlan();
   updateExerciseSelectProgress();
+  renderOverview();
 }
 
-function deleteExercise(plan, i) {
-  if (!confirm('Übung löschen?')) return;
-  plans[plan].exercises.splice(i, 1);
-  saveData();
-  loadPlan();
-  updateExerciseSelectProgress();
+// --- Edit Modal für Übungen ---
+function openEditModal(plan,i){
+  editing={plan,index:i};
+  const ex=plans[plan].exercises[i];
+  document.getElementById('editName').value=ex.name;
+  document.getElementById('editSets').value=ex.sets;
+  document.getElementById('editBodyweight').checked=ex.bodyweight;
+  document.getElementById('editNotes').value=ex.notes||'';
+  document.getElementById('editModal').style.display='flex';
 }
-
-// --- Edit Modal ---
-function openEditModal(plan, i) {
-  editing = { plan, index: i };
-  const ex = plans[plan].exercises[i];
-  document.getElementById('editName').value = ex.name;
-  document.getElementById('editSets').value = ex.sets;
-  document.getElementById('editBodyweight').checked = ex.bodyweight;
-  document.getElementById('editNotes').value = ex.notes || '';
-  document.getElementById('editModal').style.display = 'flex';
-}
-
-function closeEditModal() {
-  document.getElementById('editModal').style.display = 'none';
-  editing = { plan: null, index: null };
-}
-
-function saveExerciseEdit() {
-  const ex = plans[editing.plan].exercises[editing.index];
-  ex.name = document.getElementById('editName').value.trim();
-  ex.sets = parseInt(document.getElementById('editSets').value) || ex.sets;
-  ex.bodyweight = document.getElementById('editBodyweight').checked;
-  ex.notes = document.getElementById('editNotes').value.trim();
+function closeEditModal(){ document.getElementById('editModal').style.display='none'; editing={plan:null,index:null}; }
+function saveExerciseEdit(){
+  const ex=plans[editing.plan].exercises[editing.index];
+  ex.name=document.getElementById('editName').value.trim();
+  ex.sets=parseInt(document.getElementById('editSets').value)||ex.sets;
+  ex.bodyweight=document.getElementById('editBodyweight').checked;
+  ex.notes=document.getElementById('editNotes').value.trim();
   saveData();
   closeEditModal();
   loadPlan();
   updateExerciseSelectProgress();
+  renderOverview();
 }
 
-// --- Rename Modal ---
-function openRenameModal() {
-  const sel = document.getElementById('selectPlan').value;
-  if (!sel) return alert('Bitte zuerst einen Plan auswählen.');
-  document.getElementById('renamePlanInput').value = sel;
-  document.getElementById('renameModal').style.display = 'flex';
-}
-
-function closeRenameModal() {
-  document.getElementById('renameModal').style.display = 'none';
-}
-
-function renamePlan() {
-  const oldName = document.getElementById('selectPlan').value;
-  const newName = document.getElementById('renamePlanInput').value.trim();
-  if (!oldName) return alert('Kein Plan ausgewählt.');
-  if (!newName) return alert('Neuer Name fehlt.');
-  if (plans[newName] && newName !== oldName) return alert('Ein Plan mit diesem Namen existiert bereits.');
-  if (newName === oldName) return closeRenameModal();
-  plans[newName] = JSON.parse(JSON.stringify(plans[oldName]));
-  delete plans[oldName];
+function deleteExercise(plan,i){
+  if(!confirm('Übung löschen?')) return;
+  plans[plan].exercises.splice(i,1);
   saveData();
-  renderPlanSelectors();
-  document.getElementById('selectPlan').value = newName;
   loadPlan();
-  closeRenameModal();
-  alert(`Plan "${oldName}" wurde in "${newName}" umbenannt.`);
+  updateExerciseSelectProgress();
+  renderOverview();
 }
 
 // --- Training ---
-function loadTrainingPlan() {
-  const plan = document.getElementById('selectTrainingPlan').value;
-  const cont = document.getElementById('trainingExercises');
-  cont.innerHTML = '';
-  if (!plan || !plans[plan]) return;
-  const today = new Date().toISOString().split('T')[0];
-  if (!document.getElementById('trainingDate').value) document.getElementById('trainingDate').value = today;
-  plans[plan].exercises.forEach((ex, exIdx) => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'exercise-item';
-    let inner = `<strong>${ex.name}</strong> ${ex.bodyweight ? '(Körpergewicht)' : ''}<div style="margin-top:6px">`;
-    for (let s = 1; s <= ex.sets; s++) {
-      if (!ex.bodyweight) {
-        inner += `<div class="flex-row">Satz ${s}: <input type="number" id="w_${exIdx}_${s}" placeholder="Gewicht (kg)"><input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
+function loadTrainingPlan(){
+  const plan=document.getElementById('selectTrainingPlan').value;
+  const cont=document.getElementById('trainingExercises'); cont.innerHTML='';
+  if(!plan||!plans[plan]) return;
+  const today=new Date().toISOString().split('T')[0];
+  if(!document.getElementById('trainingDate').value) document.getElementById('trainingDate').value=today;
+  plans[plan].exercises.forEach((ex,exIdx)=>{
+    const wrapper=document.createElement('div'); wrapper.className='exercise-item';
+    let inner=`<strong>${ex.name}</strong> ${ex.bodyweight? '(Körpergewicht)':''}<div style="margin-top:6px">`;
+    for(let s=1;s<=ex.sets;s++){
+      if(!ex.bodyweight){
+        inner+=`<div class="flex-row"><div style="width:110px">Satz ${s}:</div><input type="number" id="w_${exIdx}_${s}" placeholder="Gewicht (kg)"><input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
       } else {
-        inner += `<div class="flex-row">Satz ${s}: <input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
+        inner+=`<div class="flex-row"><div style="width:110px">Satz ${s}:</div><input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
       }
     }
-    inner += `<textarea id="note_${exIdx}" placeholder="Notizen (optional)">${ex.notes || ''}</textarea></div>`;
-    wrapper.innerHTML = inner;
-    cont.appendChild(wrapper);
+    inner+=`<textarea id="note_${exIdx}" placeholder="Notizen (optional)">${ex.notes||''}</textarea></div>`;
+    wrapper.innerHTML=inner; cont.appendChild(wrapper);
   });
 }
 
-function saveTraining() {
-  const plan = document.getElementById('selectTrainingPlan').value;
-  if (!plan) return alert('Bitte Plan wählen');
-
-  const date = document.getElementById('trainingDate').value || new Date().toISOString().split('T')[0];
-  const exercisesSaved = [];
-
-  plans[plan].exercises.forEach((ex, exIdx) => {
-    const setsData = [];
-    for (let s = 1; s <= ex.sets; s++) {
-      const reps = parseInt(document.getElementById(`r_${exIdx}_${s}`)?.value) || 0;
-      const weight = ex.bodyweight ? 0 : (parseFloat(document.getElementById(`w_${exIdx}_${s}`)?.value) || 0);
-      if (reps > 0 || weight > 0) {
-        setsData.push({ weight, reps });
+function saveTraining(){
+  const plan=document.getElementById('selectTrainingPlan').value;
+  if(!plan) return alert('Bitte Plan wählen');
+  const date=document.getElementById('trainingDate').value||new Date().toISOString().split('T')[0];
+  const exercisesSaved=[];
+  plans[plan].exercises.forEach((ex,exIdx)=>{
+    const setsData=[];
+    for(let s=1;s<=ex.sets;s++){
+      const reps=parseInt(document.getElementById(`r_${exIdx}_${s}`)?.value) || 0;
+      const weight=ex.bodyweight?0:(parseFloat(document.getElementById(`w_${exIdx}_${s}`)?.value)||0);
+      if(reps>0 || weight>0){
+        setsData.push({weight,reps});
       }
     }
-
-    const note = document.getElementById(`note_${exIdx}`)?.value || '';
-
-    // 👇 Auch wenn nichts eingetragen wurde, speichern wir die Übung mit leerem Satzarray
-    exercisesSaved.push({
-      name: ex.name,
-      setsData,
-      note,
-      bodyweight: ex.bodyweight
-    });
+    const note=document.getElementById(`note_${exIdx}`)?.value||'';
+    exercisesSaved.push({name:ex.name,setsData,note,bodyweight:ex.bodyweight});
   });
-
-  // 👇 Sicherstellen, dass das History-Array existiert
-  if (!plans[plan].history) plans[plan].history = [];
-
-  plans[plan].history.push({ date, exercises: exercisesSaved });
+  if(!plans[plan].history) plans[plan].history=[];
+  plans[plan].history.push({date,exercises:exercisesSaved});
   saveData();
-
   alert('Training gespeichert!');
   renderHistory();
   updateExerciseSelectProgress();
+  renderOverview();
 }
-
 
 // --- Historie ---
-
-function renderHistory() {
-  const historyDiv = document.getElementById('historyList');
-  historyDiv.innerHTML = '';
-
-  let entriesFound = false;
-
-  for (let planName in plans) {
-    const history = plans[planName].history || [];
-    if (history.length === 0) continue;
-
-    entriesFound = true;
-
-    const planHeader = document.createElement('h3');
-    planHeader.textContent = `📘 ${planName}`;
-    historyDiv.appendChild(planHeader);
-
-    history.slice().reverse().forEach((session, index) => {
-      const item = document.createElement('div');
-      item.className = 'history-item';
-      item.innerHTML = `<strong>${session.date}</strong>`;
-
-      if (!session.exercises || session.exercises.length === 0) {
-        item.innerHTML += `<div style="margin-left:10px;">Keine Übungen</div>`;
+function renderHistory(){
+  const div=document.getElementById('historyList'); div.innerHTML='';
+  let anyEntry=false;
+  for(let p in plans){
+    const hist=plans[p].history||[];
+    if(hist.length===0) continue;
+    anyEntry=true;
+    const header=document.createElement('h3'); header.textContent=`📘 ${p}`; div.appendChild(header);
+    hist.slice().reverse().forEach((h,idx)=>{
+      const realIdx = hist.length -1 - idx;
+      const card=document.createElement('div'); card.className='history-item';
+      let inner=`<div style="display:flex;justify-content:space-between;align-items:center"><strong>${h.date}</strong>
+      <div><button onclick="openEditHistoryModal('${p}',${realIdx})" class="small-btn">Bearbeiten</button>
+      <button onclick="deleteHistory('${p}',${realIdx})" class="danger small-btn">Löschen</button></div></div><div style="margin-top:6px">`;
+      if(!h.exercises || h.exercises.length===0){
+        inner+=`<div>Keine Übungen</div>`;
       } else {
-        session.exercises.forEach(ex => {
-          const setsText = ex.setsData && ex.setsData.length
-            ? ex.setsData.map(s => `${s.weight}kg × ${s.reps}`).join(', ')
-            : '–';
-          const note = ex.note ? `<div><em>${ex.note}</em></div>` : '';
-          item.innerHTML += `
-            <div style="margin-left:10px;">
-              <strong>${ex.name}</strong>: ${setsText} ${note}
-            </div>`;
+        h.exercises.forEach(ex=>{
+          const setsText = (ex.setsData && ex.setsData.length) ? ex.setsData.map(s=> (ex.bodyweight ? `${s.reps}w` : `${s.weight}kg×${s.reps}`)).join(', ') : '–';
+          inner+=`<div style="margin-top:6px"><strong>${ex.name}</strong>: ${setsText}${ex.note?`<div class="note">${ex.note}</div>`:''}</div>`;
         });
       }
-
-      // Löschen-Button für diese Session
-      item.innerHTML += `<button class="danger" style="margin-top:5px;" onclick="deleteHistory('${planName}',${history.length - 1 - index})">Eintrag löschen</button>`;
-
-      historyDiv.appendChild(item);
+      inner+='</div>';
+      card.innerHTML=inner;
+      div.appendChild(card);
     });
   }
-
-  if (!entriesFound) {
-    historyDiv.innerHTML = '<p>Keine Trainingshistorie vorhanden.</p>';
-  }
+  if(!anyEntry) div.innerHTML='<i>Keine Trainingshistorie vorhanden</i>';
 }
 
-
-function deleteHistory(plan, index) {
-  if (!confirm('Eintrag löschen?')) return;
-  plans[plan].history.splice(index, 1);
+function deleteHistory(plan,index){
+  if(!confirm('Eintrag löschen?')) return;
+  plans[plan].history.splice(index,1);
   saveData();
   renderHistory();
   updateExerciseSelectProgress();
+  renderOverview();
 }
 
-// --- Fortschritt ---
-
-function updateExerciseSelectProgress() {
-  const sel = document.getElementById('exerciseSelectProgress');
-  sel.innerHTML = '<option value="">-- Übung wählen --</option>';
-
-  const exercisesSet = new Set();
-  for (let planName in plans) {
-    (plans[planName].exercises || []).forEach(ex => exercisesSet.add(ex.name));
-  }
-
-  Array.from(exercisesSet).forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    sel.appendChild(opt);
+// --- Edit History Modal (voll editierbar) ---
+function openEditHistoryModal(plan,index){
+  historyEditing={plan,index};
+  const entry = plans[plan].history[index];
+  const container=document.getElementById('historyEditContent'); container.innerHTML='';
+  container.innerHTML += `<div class="row"><label class="small">Datum</label><input id="hist_date" type="date" value="${entry.date}"></div>`;
+  entry.exercises.forEach((ex,exIdx)=>{
+    const exDiv=document.createElement('div'); exDiv.className='exercise-item';
+    let inner=`<strong>${ex.name}</strong> ${ex.bodyweight? '(Körpergewicht)':''}<div style="margin-top:6px">`;
+    const planDef = (plans[plan].exercises.find(e=>e.name===ex.name) || {});
+    const maxSets = Math.max(planDef.sets || 0, ex.setsData.length || 0, 1);
+    for(let s=0;s<maxSets;s++){
+      const w = ex.setsData[s] ? ex.setsData[s].weight : '';
+      const r = ex.setsData[s] ? ex.setsData[s].reps : '';
+      if(!ex.bodyweight){
+        inner+=`<div class="flex-row"><div style="width:110px">Satz ${s+1}:</div><input type="number" class="hist_w" data-ex="${exIdx}" data-set="${s}" value="${w}" placeholder="Gewicht (kg)"><input type="number" class="hist_r" data-ex="${exIdx}" data-set="${s}" value="${r}" placeholder="Wdh"></div>`;
+      } else {
+        inner+=`<div class="flex-row"><div style="width:110px">Satz ${s+1}:</div><input type="number" class="hist_r" data-ex="${exIdx}" data-set="${s}" value="${r}" placeholder="Wdh"></div>`;
+      }
+    }
+    inner+=`<div style="margin-top:6px"><label class="small">Notiz</label><textarea id="hist_note_${exIdx}">${ex.note||''}</textarea></div>`;
+    inner+=`</div>`;
+    exDiv.innerHTML=inner;
+    container.appendChild(exDiv);
   });
-
-  // Auto-render für die erste Übung, falls vorhanden
-  if (sel.value) renderProgressChart();
+  document.getElementById('editHistoryModal').style.display='flex';
 }
 
+function closeEditHistoryModal(){ document.getElementById('editHistoryModal').style.display='none'; historyEditing={plan:null,index:null}; }
 
-let chart; // globale Chart-Variable
+function saveHistoryEdit(){
+  const {plan,index} = historyEditing;
+  if(!plan) return;
+  const entry = plans[plan].history[index];
+  entry.date = document.getElementById('hist_date').value || entry.date;
+  entry.exercises.forEach((ex,exIdx)=>{
+    const inputsW = Array.from(document.querySelectorAll(`.hist_w[data-ex="${exIdx}"]`));
+    const inputsR = Array.from(document.querySelectorAll(`.hist_r[data-ex="${exIdx}"]`));
+    const sets=[];
+    const count = Math.max(inputsR.length, inputsW.length);
+    for(let s=0;s<count;s++){
+      const wIn = inputsW.find(i=>parseInt(i.dataset.set)===s);
+      const rIn = inputsR.find(i=>parseInt(i.dataset.set)===s);
+      const weight = wIn ? parseFloat(wIn.value)||0 : 0;
+      const reps = rIn ? parseInt(rIn.value)||0 : 0;
+      if(weight>0 || reps>0) sets.push({weight,reps});
+    }
+    ex.setsData = sets;
+    ex.note = document.getElementById(`hist_note_${exIdx}`)?.value || '';
+  });
+  saveData();
+  closeEditHistoryModal();
+  renderHistory();
+  updateExerciseSelectProgress();
+  renderOverview();
+  alert('Historien-Eintrag gespeichert.');
+}
+
+// --- Fortschritt / Chart ---
+function updateExerciseSelectProgress(){
+  const sel=document.getElementById('exerciseSelectProgress');
+  sel.innerHTML='<option value="">-- Übung wählen --</option>';
+  const names=new Set();
+  for(let p in plans){
+    (plans[p].exercises || []).forEach(e=>names.add(e.name));
+  }
+  Array.from(names).forEach(n=>{ sel.innerHTML+=`<option value="${n}">${n}</option>`; });
+  renderProgressChart();
+}
+
 
 function renderProgressChart() {
-  const select = document.getElementById('exerciseSelectProgress');
-  const name = select.value;
-  if (!name) {
-    if (chart) chart.destroy();
-    const ctx = document.getElementById('chart').getContext('2d');
-    ctx.clearRect(0, 0, 500, 300);
-    ctx.font = '16px Arial';
-    ctx.fillText('Bitte Übung auswählen', 40, 150);
-    return;
-  }
+  const name = document.getElementById('exerciseSelectProgress').value;
+  if (!name) return;
 
   const mode = document.getElementById('displayMode').value;
-  const labels = [];
-  const data = [];
+  let data = [];
+  let labels = [];
 
-  for (let planName in plans) {
-    const history = plans[planName].history || [];
-    history.forEach(entry => {
-      const ex = entry.exercises.find(e => e.name === name);
-      if (!ex || !ex.setsData || ex.setsData.length === 0) return;
+  // Alle Trainingsdaten durchsuchen
+  for (let p in plans) {
+    plans[p].history.forEach(h => {
+      const ex = h.exercises.find(e => e.name === name);
+      if (ex) {
+        let y = 0;
 
-      let value = 0;
-      if (mode === 'sum') {
-        value = ex.setsData.reduce((sum, s) => sum + s.weight * s.reps, 0);
-      } else {
-        value = Math.max(...ex.setsData.map(s => s.weight));
+        // Körpergewichtsübung → Wiederholungen zählen
+        if (ex.bodyweight) {
+          if (mode === 'sum') {
+            // Gesamtwiederholungen des Tages
+            y = ex.setsData.reduce((a, s) => a + s.reps, 0);
+          } else {
+            // Maximale Wiederholungen eines Satzes
+            y = Math.max(...ex.setsData.map(s => s.reps));
+          }
+        } else {
+          // Gewichtete Übung → Gewicht × Wiederholungen oder Max Gewicht
+          if (mode === 'sum') {
+            y = ex.setsData.reduce((a, s) => a + s.weight * s.reps, 0);
+          } else {
+            y = Math.max(...ex.setsData.map(s => s.weight));
+          }
+        }
+
+        data.push(y);
+        labels.push(h.date);
       }
-
-      labels.push(`${entry.date} (${planName})`);
-      data.push(value);
     });
   }
 
-  const ctx = document.getElementById('chart').getContext('2d');
+  // 🔽 Daten chronologisch sortieren (ältestes links, neuestes rechts)
+  const combined = labels.map((date, i) => ({ date, value: data[i] }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  labels = combined.map(c => c.date);
+  data = combined.map(c => c.value);
+
+  // Vorherigen Chart löschen, wenn vorhanden
   if (chart) chart.destroy();
 
   if (data.length === 0) {
+    const ctx = document.getElementById('chart').getContext('2d');
     ctx.clearRect(0, 0, 500, 300);
-    ctx.font = '16px Arial';
-    ctx.fillText('Keine Trainingsdaten für diese Übung vorhanden', 40, 150);
     return;
   }
 
+  // Neues Diagramm erstellen
+  const ctx = document.getElementById('chart').getContext('2d');
   chart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: labels,
+      labels,
       datasets: [{
         label: name,
-        data: data,
-        borderColor: '#4caf50',
-        borderWidth: 2,
+        data,
         fill: false,
-        tension: 0.3
+        borderColor: '#4caf50',
+        tension: 0.25
       }]
     },
     options: {
       responsive: true,
       scales: {
-        y: { beginAtZero: true, title: { display: true, text: mode === 'sum' ? 'Gesamtvolumen (kg×Wdh)' : 'Max Gewicht (kg)' } },
-        x: { title: { display: true, text: 'Datum / Plan' } }
+        y: { beginAtZero: true }
       }
     }
   });
 }
 
 
-// --- Übersicht ---
-function renderOverview() {
-  const div = document.getElementById('allPlans');
-  div.innerHTML = '';
-  for (let p in plans) {
-    const card = document.createElement('div');
-    card.className = 'exercise-item';
-    card.innerHTML = `<strong>${p}</strong> — ${plans[p].exercises.length} Übungen`;
-    div.appendChild(card);
-  }
-}
+
 
 // --- Import / Export ---
-function exportData() {
-  const dataStr = JSON.stringify(plans, null, 2);
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'trainings_backup.json';
+function exportData(){
+  const dataStr=JSON.stringify(plans,null,2);
+  const blob=new Blob([dataStr],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='trainings_backup.json';
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
-
-function importData(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const imported = JSON.parse(e.target.result);
-      if (!confirm('Importiert werden alle Pläne. Alte Daten gehen verloren. Fortfahren?')) return;
-      plans = imported;
+function importData(input){
+  const file=input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const imported=JSON.parse(e.target.result);
+      if(!confirm('Importiert werden alle Pläne. Alte Daten gehen verloren. Fortfahren?')) return;
+      plans=imported;
       saveData(); renderPlanSelectors(); renderHistory(); updateExerciseSelectProgress(); renderOverview();
       alert('Import erfolgreich!');
-    } catch (err) { alert('Fehler beim Import: ' + err.message); }
+    }catch(err){ alert('Fehler beim Import: '+err.message); }
   };
   reader.readAsText(file);
 }
 
-// --- Klick außerhalb Modal schließt Fenster ---
-window.addEventListener('click', function(e) {
-  if (e.target.classList.contains('modal')) e.target.style.display = 'none';
-});
-
-
-
+// --- Debug ---
+function showDebugData(){ document.getElementById('debugOutput').textContent = JSON.stringify(plans,null,2); }
+function clearDebug(){ if(confirm('localStorage wirklich leeren?')){ localStorage.removeItem('plans'); plans={}; saveData(); renderPlanSelectors(); renderHistory(); updateExerciseSelectProgress(); renderOverview(); document.getElementById('debugOutput').textContent=''; alert('Gelöscht.'); } }
 
 // --- Initialisierung ---
 renderPlanSelectors();
 updateExerciseSelectProgress();
 renderHistory();
 renderOverview();
+
+// --- Utility: close modals when clicking outside ---
+window.addEventListener('click', function(e){
+  if(e.target && e.target.classList && e.target.classList.contains('modal')){
+    e.target.style.display='none';
+    editing={plan:null,index:null};
+    historyEditing={plan:null,index:null};
+    planToDelete=null;
+  }
+});
 </script>
-
-
-
 </body>
 </html>
