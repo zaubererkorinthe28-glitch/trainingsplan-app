@@ -315,26 +315,42 @@ function loadTrainingPlan() {
 function saveTraining() {
   const plan = document.getElementById('selectTrainingPlan').value;
   if (!plan) return alert('Bitte Plan wählen');
+
   const date = document.getElementById('trainingDate').value || new Date().toISOString().split('T')[0];
   const exercisesSaved = [];
+
   plans[plan].exercises.forEach((ex, exIdx) => {
     const setsData = [];
     for (let s = 1; s <= ex.sets; s++) {
       const reps = parseInt(document.getElementById(`r_${exIdx}_${s}`)?.value) || 0;
       const weight = ex.bodyweight ? 0 : (parseFloat(document.getElementById(`w_${exIdx}_${s}`)?.value) || 0);
-      if (reps > 0 || weight > 0) setsData.push({ weight, reps });
+      if (reps > 0 || weight > 0) {
+        setsData.push({ weight, reps });
+      }
     }
+
     const note = document.getElementById(`note_${exIdx}`)?.value || '';
-    if (setsData.length > 0) exercisesSaved.push({ name: ex.name, setsData, note, bodyweight: ex.bodyweight });
+
+    // 👇 Auch wenn nichts eingetragen wurde, speichern wir die Übung mit leerem Satzarray
+    exercisesSaved.push({
+      name: ex.name,
+      setsData,
+      note,
+      bodyweight: ex.bodyweight
+    });
   });
-  if (exercisesSaved.length === 0) return alert('Keine Wiederholungen oder Gewichte eingegeben – Training wurde nicht gespeichert.');
+
+  // 👇 Sicherstellen, dass das History-Array existiert
   if (!plans[plan].history) plans[plan].history = [];
+
   plans[plan].history.push({ date, exercises: exercisesSaved });
   saveData();
+
   alert('Training gespeichert!');
   renderHistory();
   updateExerciseSelectProgress();
 }
+
 
 // --- Historie ---
 function renderHistory() {
