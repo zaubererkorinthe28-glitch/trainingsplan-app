@@ -121,77 +121,46 @@ canvas { background:#fff; border-radius:8px; padding:8px; }
 </div>
 
 <script>
-let plans=JSON.parse(localStorage.getItem('plans')||'{}');
-let chart=null;
-let editing={plan:null,index:null};
+let plans = JSON.parse(localStorage.getItem('plans') || '{}');
+let chart = null;
+let editing = { plan: null, index: null };
+let planToDelete = null;
 
-function saveData(){ localStorage.setItem('plans',JSON.stringify(plans)); }
+function saveData() { localStorage.setItem('plans', JSON.stringify(plans)); }
 
-function showTab(id){
-document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-document.getElementById(id).classList.add('active');
-document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-document.getElementById('btn'+id.charAt(0).toUpperCase()+id.slice(1)).classList.add('active');
-if(id==='plans') renderPlanSelectors();
-if(id==='progress') updateExerciseSelectProgress();
-if(id==='history') renderHistory();
-if(id==='overview') renderOverview();
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn' + id.charAt(0).toUpperCase() + id.slice(1)).classList.add('active');
+  if (id === 'plans') renderPlanSelectors();
+  if (id === 'progress') updateExerciseSelectProgress();
+  if (id === 'history') renderHistory();
+  if (id === 'overview') renderOverview();
 }
 
 // --- Planverwaltung ---
-function renderPlanSelectors(){
-const sel=document.getElementById('selectPlan');
-const selTrain=document.getElementById('selectTrainingPlan');
-sel.innerHTML='<option value="">-- Plan wählen --</option>';
-selTrain.innerHTML='<option value="">-- Plan wählen --</option>';
-for(let p in plans){
-sel.innerHTML+=`<option value="${p}">${p}</option>`;
-selTrain.innerHTML+=`<option value="${p}">${p}</option>`;
-}
-loadPlan();
-}
-
-function addPlan(){
-const name=document.getElementById('planName').value.trim();
-if(!name) return alert('Planname fehlt');
-if(plans[name]) return alert('Plan existiert bereits');
-plans[name]={exercises:[],history:[]};
-saveData();
-document.getElementById('planName').value='';
-renderPlanSelectors();
+function renderPlanSelectors() {
+  const sel = document.getElementById('selectPlan');
+  const selTrain = document.getElementById('selectTrainingPlan');
+  sel.innerHTML = '<option value="">-- Plan wählen --</option>';
+  selTrain.innerHTML = '<option value="">-- Plan wählen --</option>';
+  for (let p in plans) {
+    sel.innerHTML += `<option value="${p}">${p}</option>`;
+    selTrain.innerHTML += `<option value="${p}">${p}</option>`;
+  }
+  loadPlan();
 }
 
-function deletePlan(){
-const sel=document.getElementById('selectPlan').value;
-if(!sel) return alert('Kein Plan gewählt');
-if(!confirm(`Plan "${sel}" wirklich löschen?`)) return;
-delete plans[sel];
-saveData();
-renderPlanSelectors();
-document.getElementById('exercises').innerHTML='';
-}
-
-function renamePlan() {
-  const oldName = document.getElementById('selectPlan').value;
-  const newName = document.getElementById('renamePlanName').value.trim();
-
-  if (!oldName) return alert('Bitte wähle zuerst einen Plan aus.');
-  if (!newName) return alert('Neuer Name fehlt.');
-  if (plans[newName]) return alert('Ein Plan mit diesem Namen existiert bereits.');
-
-  // Plan kopieren und unter neuem Namen speichern
-  plans[newName] = JSON.parse(JSON.stringify(plans[oldName]));
-  delete plans[oldName];
+function addPlan() {
+  const name = document.getElementById('planName').value.trim();
+  if (!name) return alert('Planname fehlt');
+  if (plans[name]) return alert('Plan existiert bereits');
+  plans[name] = { exercises: [], history: [] };
   saveData();
-
-  // UI aktualisieren
-  document.getElementById('renamePlanName').value = '';
+  document.getElementById('planName').value = '';
   renderPlanSelectors();
-  alert(`Plan "${oldName}" wurde in "${newName}" umbenannt.`);
 }
-
-// --- Plan löschen (Modal) ---
-let planToDelete = null;
 
 function openDeleteModal() {
   const sel = document.getElementById('selectPlan').value;
@@ -217,275 +186,273 @@ function deletePlanConfirmed() {
   alert(`Plan "${planToDelete}" wurde gelöscht.`);
 }
 
-
-
-
-function loadPlan(){
-const plan=document.getElementById('selectPlan').value;
-const container=document.getElementById('exercises'); container.innerHTML='';
-if(!plan||!plans[plan]) return;
-plans[plan].exercises.forEach((ex,i)=>{
-const el=document.createElement('div'); el.className='exercise-item';
-el.innerHTML=`<strong>${ex.name}</strong> — ${ex.sets} Sätze ${ex.bodyweight? '(Körpergewicht)':''}
-<div style="margin-top:6px"><small>${ex.notes||''}</small></div>
-<div style="margin-top:8px;display:flex;gap:8px">
-<button onclick="openEditModal('${plan}',${i})">Bearbeiten</button>
-<button onclick="deleteExercise('${plan}',${i})" class="danger">Löschen</button>
-</div>`;
-container.appendChild(el);
-});
+function loadPlan() {
+  const plan = document.getElementById('selectPlan').value;
+  const container = document.getElementById('exercises');
+  container.innerHTML = '';
+  if (!plan || !plans[plan]) return;
+  plans[plan].exercises.forEach((ex, i) => {
+    const el = document.createElement('div');
+    el.className = 'exercise-item';
+    el.innerHTML = `<strong>${ex.name}</strong> — ${ex.sets} Sätze ${ex.bodyweight ? '(Körpergewicht)' : ''}
+    <div style="margin-top:6px"><small>${ex.notes || ''}</small></div>
+    <div style="margin-top:8px;display:flex;gap:8px">
+      <button onclick="openEditModal('${plan}',${i})">Bearbeiten</button>
+      <button onclick="deleteExercise('${plan}',${i})" class="danger">Löschen</button>
+    </div>`;
+    container.appendChild(el);
+  });
 }
 
-function addExercise(){
-const plan=document.getElementById('selectPlan').value;
-if(!plan) return alert('Bitte Plan wählen');
-const name=document.getElementById('exerciseName').value.trim();
-const sets=parseInt(document.getElementById('sets').value);
-const bodyweight=document.getElementById('bodyweight').checked;
-const notes=document.getElementById('notes').value.trim();
-if(!name||!sets) return alert('Übung & Sätze erforderlich');
-plans[plan].exercises.push({name,sets,bodyweight,notes});
-saveData();
-document.getElementById('exerciseName').value='';
-document.getElementById('sets').value='';
-document.getElementById('bodyweight').checked=false;
-document.getElementById('notes').value='';
-loadPlan();
-updateExerciseSelectProgress();
+function addExercise() {
+  const plan = document.getElementById('selectPlan').value;
+  if (!plan) return alert('Bitte Plan wählen');
+  const name = document.getElementById('exerciseName').value.trim();
+  const sets = parseInt(document.getElementById('sets').value);
+  const bodyweight = document.getElementById('bodyweight').checked;
+  const notes = document.getElementById('notes').value.trim();
+  if (!name || !sets) return alert('Übung & Sätze erforderlich');
+  plans[plan].exercises.push({ name, sets, bodyweight, notes });
+  saveData();
+  document.getElementById('exerciseName').value = '';
+  document.getElementById('sets').value = '';
+  document.getElementById('bodyweight').checked = false;
+  document.getElementById('notes').value = '';
+  loadPlan();
+  updateExerciseSelectProgress();
 }
 
-function deleteExercise(plan,i){
-if(!confirm('Übung löschen?')) return;
-plans[plan].exercises.splice(i,1);
-saveData();
-loadPlan();
-updateExerciseSelectProgress();
+function deleteExercise(plan, i) {
+  if (!confirm('Übung löschen?')) return;
+  plans[plan].exercises.splice(i, 1);
+  saveData();
+  loadPlan();
+  updateExerciseSelectProgress();
 }
 
 // --- Edit Modal ---
-function openEditModal(plan,i){
-editing={plan,index:i};
-const ex=plans[plan].exercises[i];
-document.getElementById('editName').value=ex.name;
-document.getElementById('editSets').value=ex.sets;
-document.getElementById('editBodyweight').checked=ex.bodyweight;
-document.getElementById('editNotes').value=ex.notes||'';
-document.getElementById('editModal').style.display='flex';
+function openEditModal(plan, i) {
+  editing = { plan, index: i };
+  const ex = plans[plan].exercises[i];
+  document.getElementById('editName').value = ex.name;
+  document.getElementById('editSets').value = ex.sets;
+  document.getElementById('editBodyweight').checked = ex.bodyweight;
+  document.getElementById('editNotes').value = ex.notes || '';
+  document.getElementById('editModal').style.display = 'flex';
 }
 
-function closeEditModal(){ document.getElementById('editModal').style.display='none'; editing={plan:null,index:null}; }
-
-function saveExerciseEdit(){
-const ex=plans[editing.plan].exercises[editing.index];
-ex.name=document.getElementById('editName').value.trim();
-ex.sets=parseInt(document.getElementById('editSets').value)||ex.sets;
-ex.bodyweight=document.getElementById('editBodyweight').checked;
-ex.notes=document.getElementById('editNotes').value.trim();
-saveData();
-closeEditModal();
-loadPlan();
-updateExerciseSelectProgress();
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  editing = { plan: null, index: null };
 }
 
-// -- Modal: Plan löschen --
-<div id="deleteModal" class="modal">
-  <div class="card">
-    <h3>Plan löschen</h3>
-    <p id="deletePlanText">Bist du sicher, dass du diesen Plan löschen möchtest?</p>
-    <div style="display:flex;gap:8px;justify-content:space-between">
-      <button class="danger" onclick="deletePlanConfirmed()">Ja, löschen</button>
-      <button onclick="closeDeleteModal()">Abbrechen</button>
-    </div>
-  </div>
-</div>
+function saveExerciseEdit() {
+  const ex = plans[editing.plan].exercises[editing.index];
+  ex.name = document.getElementById('editName').value.trim();
+  ex.sets = parseInt(document.getElementById('editSets').value) || ex.sets;
+  ex.bodyweight = document.getElementById('editBodyweight').checked;
+  ex.notes = document.getElementById('editNotes').value.trim();
+  saveData();
+  closeEditModal();
+  loadPlan();
+  updateExerciseSelectProgress();
+}
 
+// --- Rename Modal ---
+function openRenameModal() {
+  const sel = document.getElementById('selectPlan').value;
+  if (!sel) return alert('Bitte zuerst einen Plan auswählen.');
+  document.getElementById('renamePlanInput').value = sel;
+  document.getElementById('renameModal').style.display = 'flex';
+}
+
+function closeRenameModal() {
+  document.getElementById('renameModal').style.display = 'none';
+}
+
+function renamePlan() {
+  const oldName = document.getElementById('selectPlan').value;
+  const newName = document.getElementById('renamePlanInput').value.trim();
+  if (!oldName) return alert('Kein Plan ausgewählt.');
+  if (!newName) return alert('Neuer Name fehlt.');
+  if (plans[newName] && newName !== oldName) return alert('Ein Plan mit diesem Namen existiert bereits.');
+  if (newName === oldName) return closeRenameModal();
+  plans[newName] = JSON.parse(JSON.stringify(plans[oldName]));
+  delete plans[oldName];
+  saveData();
+  renderPlanSelectors();
+  document.getElementById('selectPlan').value = newName;
+  loadPlan();
+  closeRenameModal();
+  alert(`Plan "${oldName}" wurde in "${newName}" umbenannt.`);
+}
 
 // --- Training ---
-function loadTrainingPlan(){
-const plan=document.getElementById('selectTrainingPlan').value;
-const cont=document.getElementById('trainingExercises'); cont.innerHTML='';
-if(!plan||!plans[plan]) return;
-const today=new Date().toISOString().split('T')[0];
-if(!document.getElementById('trainingDate').value) document.getElementById('trainingDate').value=today;
-plans[plan].exercises.forEach((ex,exIdx)=>{
-const wrapper=document.createElement('div'); wrapper.className='exercise-item';
-let inner=`<strong>${ex.name}</strong> ${ex.bodyweight? '(Körpergewicht)':''}<div style="margin-top:6px">`;
-for(let s=1;s<=ex.sets;s++){
-if(!ex.bodyweight){
-inner+=`<div class="flex-row">Satz ${s}: <input type="number" id="w_${exIdx}_${s}" placeholder="Gewicht (kg)"><input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
-}else{
-inner+=`<div class="flex-row">Satz ${s}: <input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
-}
-}
-inner+=`<textarea id="note_${exIdx}" placeholder="Notizen (optional)">${ex.notes||''}</textarea></div>`;
-wrapper.innerHTML=inner; cont.appendChild(wrapper);
-});
+function loadTrainingPlan() {
+  const plan = document.getElementById('selectTrainingPlan').value;
+  const cont = document.getElementById('trainingExercises');
+  cont.innerHTML = '';
+  if (!plan || !plans[plan]) return;
+  const today = new Date().toISOString().split('T')[0];
+  if (!document.getElementById('trainingDate').value) document.getElementById('trainingDate').value = today;
+  plans[plan].exercises.forEach((ex, exIdx) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'exercise-item';
+    let inner = `<strong>${ex.name}</strong> ${ex.bodyweight ? '(Körpergewicht)' : ''}<div style="margin-top:6px">`;
+    for (let s = 1; s <= ex.sets; s++) {
+      if (!ex.bodyweight) {
+        inner += `<div class="flex-row">Satz ${s}: <input type="number" id="w_${exIdx}_${s}" placeholder="Gewicht (kg)"><input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
+      } else {
+        inner += `<div class="flex-row">Satz ${s}: <input type="number" id="r_${exIdx}_${s}" placeholder="Wdh"></div>`;
+      }
+    }
+    inner += `<textarea id="note_${exIdx}" placeholder="Notizen (optional)">${ex.notes || ''}</textarea></div>`;
+    wrapper.innerHTML = inner;
+    cont.appendChild(wrapper);
+  });
 }
 
 function saveTraining() {
   const plan = document.getElementById('selectTrainingPlan').value;
   if (!plan) return alert('Bitte Plan wählen');
-
   const date = document.getElementById('trainingDate').value || new Date().toISOString().split('T')[0];
   const exercisesSaved = [];
-
-  // Für jede Übung im Plan
   plans[plan].exercises.forEach((ex, exIdx) => {
     const setsData = [];
-
     for (let s = 1; s <= ex.sets; s++) {
       const reps = parseInt(document.getElementById(`r_${exIdx}_${s}`)?.value) || 0;
       const weight = ex.bodyweight ? 0 : (parseFloat(document.getElementById(`w_${exIdx}_${s}`)?.value) || 0);
-
-      // Nur speichern, wenn es echte Werte gibt
-      if (reps > 0 || weight > 0) {
-        setsData.push({ weight, reps });
-      }
+      if (reps > 0 || weight > 0) setsData.push({ weight, reps });
     }
-
     const note = document.getElementById(`note_${exIdx}`)?.value || '';
-
-    if (setsData.length > 0) {
-      exercisesSaved.push({
-        name: ex.name,
-        setsData,
-        note,
-        bodyweight: ex.bodyweight
-      });
-    }
+    if (setsData.length > 0) exercisesSaved.push({ name: ex.name, setsData, note, bodyweight: ex.bodyweight });
   });
-
-  if (exercisesSaved.length === 0) {
-    return alert('Keine Wiederholungen oder Gewichte eingegeben – Training wurde nicht gespeichert.');
-  }
-
-  // Falls kein history-Array vorhanden, anlegen
+  if (exercisesSaved.length === 0) return alert('Keine Wiederholungen oder Gewichte eingegeben – Training wurde nicht gespeichert.');
   if (!plans[plan].history) plans[plan].history = [];
-
   plans[plan].history.push({ date, exercises: exercisesSaved });
   saveData();
-
   alert('Training gespeichert!');
-
-  // Tabs aktualisieren
   renderHistory();
   updateExerciseSelectProgress();
 }
 
-
-
-
-
 // --- Historie ---
-function renderHistory(){
-const div=document.getElementById('historyList'); div.innerHTML='';
-let anyEntry=false;
-for(let p in plans){
-const hist=plans[p].history||[];
-hist.forEach((h,idx)=>{
-anyEntry=true;
-const card=document.createElement('div'); card.className='history-item';
-card.innerHTML=`<strong>${p}</strong> — ${h.date}<div style="margin-top:6px">`+
-h.exercises.map(e=>{
-return `<div><strong>${e.name}</strong>: `+
-(e.setsData.map(s=>`${s.weight?(s.weight+'kg×'):''}${s.reps}w`).join(', ')||'-')+
-(e.note?`<div style="margin-top:4px"><small>${e.note}</small></div>`:'')+
-`</div>`;
-}).join('')+
-`</div><div style="margin-top:6px"><button class="danger" onclick="deleteHistory('${p}',${idx})">Eintrag löschen</button></div>`;
-div.appendChild(card);
-});
-}
-if(!anyEntry) div.innerHTML='<i>Keine Trainingshistorie vorhanden</i>';
+function renderHistory() {
+  const div = document.getElementById('historyList');
+  div.innerHTML = '';
+  let anyEntry = false;
+  for (let p in plans) {
+    const hist = plans[p].history || [];
+    hist.forEach((h, idx) => {
+      anyEntry = true;
+      const card = document.createElement('div');
+      card.className = 'history-item';
+      card.innerHTML = `<strong>${p}</strong> — ${h.date}<div style="margin-top:6px">` +
+        h.exercises.map(e => {
+          return `<div><strong>${e.name}</strong>: ` +
+            (e.setsData.map(s => `${s.weight ? (s.weight + 'kg×') : ''}${s.reps}w`).join(', ') || '-') +
+            (e.note ? `<div style="margin-top:4px"><small>${e.note}</small></div>` : '') +
+            `</div>`;
+        }).join('') +
+        `</div><div style="margin-top:6px"><button class="danger" onclick="deleteHistory('${p}',${idx})">Eintrag löschen</button></div>`;
+      div.appendChild(card);
+    });
+  }
+  if (!anyEntry) div.innerHTML = '<i>Keine Trainingshistorie vorhanden</i>';
 }
 
-function deleteHistory(plan,index){
-if(!confirm('Eintrag löschen?')) return;
-plans[plan].history.splice(index,1);
-saveData();
-renderHistory();
-updateExerciseSelectProgress();
+function deleteHistory(plan, index) {
+  if (!confirm('Eintrag löschen?')) return;
+  plans[plan].history.splice(index, 1);
+  saveData();
+  renderHistory();
+  updateExerciseSelectProgress();
 }
 
 // --- Fortschritt ---
-function updateExerciseSelectProgress(){
-const sel=document.getElementById('exerciseSelectProgress');
-sel.innerHTML='<option value="">-- Übung wählen --</option>';
-let exercisesSet=new Set();
-for(let p in plans){
-plans[p].exercises.forEach(e=>exercisesSet.add(e.name));
-}
-Array.from(exercisesSet).forEach(name=>{sel.innerHTML+=`<option value="${name}">${name}</option>`;});
-renderProgressChart();
+function updateExerciseSelectProgress() {
+  const sel = document.getElementById('exerciseSelectProgress');
+  sel.innerHTML = '<option value="">-- Übung wählen --</option>';
+  let exercisesSet = new Set();
+  for (let p in plans) {
+    plans[p].exercises.forEach(e => exercisesSet.add(e.name));
+  }
+  Array.from(exercisesSet).forEach(name => { sel.innerHTML += `<option value="${name}">${name}</option>`; });
+  renderProgressChart();
 }
 
-function renderProgressChart(){
-const name=document.getElementById('exerciseSelectProgress').value;
-if(!name) return;
-const mode=document.getElementById('displayMode').value;
-let data=[],labels=[];
-for(let p in plans){
-plans[p].history.forEach(h=>{
-const ex=h.exercises.find(e=>e.name===name);
-if(ex){
-let y=0;
-if(mode==='sum'){ y=ex.setsData.reduce((a,s)=>a+s.weight*s.reps,0); }
-else{ y=Math.max(...ex.setsData.map(s=>s.weight)); }
-data.push(y); labels.push(h.date);
-}
-});
-}
-if(chart) chart.destroy();
-if(data.length===0){ document.getElementById('chart').getContext('2d').clearRect(0,0,500,300); return; }
-const ctx=document.getElementById('chart').getContext('2d');
-chart=new Chart(ctx,{type:'line',data:{labels, datasets:[{label:name,data,fill:false,borderColor:'#4caf50'}]},options:{responsive:true,scales:{y:{beginAtZero:true}}}});
+function renderProgressChart() {
+  const name = document.getElementById('exerciseSelectProgress').value;
+  if (!name) return;
+  const mode = document.getElementById('displayMode').value;
+  let data = [], labels = [];
+  for (let p in plans) {
+    plans[p].history.forEach(h => {
+      const ex = h.exercises.find(e => e.name === name);
+      if (ex) {
+        let y = 0;
+        if (mode === 'sum') y = ex.setsData.reduce((a, s) => a + s.weight * s.reps, 0);
+        else y = Math.max(...ex.setsData.map(s => s.weight));
+        data.push(y); labels.push(h.date);
+      }
+    });
+  }
+  if (chart) chart.destroy();
+  const ctx = document.getElementById('chart').getContext('2d');
+  if (data.length === 0) { ctx.clearRect(0, 0, 500, 300); return; }
+  chart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: name, data, fill: false, borderColor: '#4caf50' }] }, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
 }
 
 // --- Übersicht ---
-function renderOverview(){
-const div=document.getElementById('allPlans'); div.innerHTML='';
-for(let p in plans){
-const card=document.createElement('div'); card.className='exercise-item';
-card.innerHTML=`<strong>${p}</strong> — ${plans[p].exercises.length} Übungen`;
-div.appendChild(card);
-}
+function renderOverview() {
+  const div = document.getElementById('allPlans');
+  div.innerHTML = '';
+  for (let p in plans) {
+    const card = document.createElement('div');
+    card.className = 'exercise-item';
+    card.innerHTML = `<strong>${p}</strong> — ${plans[p].exercises.length} Übungen`;
+    div.appendChild(card);
+  }
 }
 
 // --- Import / Export ---
-function exportData(){
-const dataStr=JSON.stringify(plans,null,2);
-const blob=new Blob([dataStr],{type:"application/json"});
-const url=URL.createObjectURL(blob);
-const a=document.createElement('a'); a.href=url; a.download='trainings_backup.json';
-document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+function exportData() {
+  const dataStr = JSON.stringify(plans, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'trainings_backup.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
-function importData(input){
-const file=input.files[0];
-if(!file) return;
-const reader=new FileReader();
-reader.onload=function(e){
-try{
-const imported=JSON.parse(e.target.result);
-if(!confirm('Importiert werden alle Pläne. Alte Daten gehen verloren. Fortfahren?')) return;
-plans=imported;
-saveData(); renderPlanSelectors(); renderHistory(); updateExerciseSelectProgress(); renderOverview();
-alert('Import erfolgreich!');
-}catch(err){ alert('Fehler beim Import: '+err.message); }
-};
-reader.readAsText(file);
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!confirm('Importiert werden alle Pläne. Alte Daten gehen verloren. Fortfahren?')) return;
+      plans = imported;
+      saveData(); renderPlanSelectors(); renderHistory(); updateExerciseSelectProgress(); renderOverview();
+      alert('Import erfolgreich!');
+    } catch (err) { alert('Fehler beim Import: ' + err.message); }
+  };
+  reader.readAsText(file);
 }
+
+// --- Klick außerhalb Modal schließt Fenster ---
+window.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal')) e.target.style.display = 'none';
+});
 
 // --- Initialisierung ---
 renderPlanSelectors();
 updateExerciseSelectProgress();
 renderHistory();
 renderOverview();
-if (Object.keys(plans).length === 0) {
-  console.log("Keine Pläne vorhanden – bitte neuen Plan erstellen.");
-} else {
-  renderHistory();
-  updateExerciseSelectProgress();
-}
 </script>
+
+
+
 </body>
 </html>
