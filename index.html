@@ -190,6 +190,19 @@ let plans = JSON.parse(localStorage.getItem('plans')||'{}');
 let chart = null;
 let allExercises = JSON.parse(localStorage.getItem('allExercises') || '[]');
 
+// --- Alte Übungen aus bestehenden Plänen übernehmen ---
+if (Object.keys(plans).length > 0) {
+  const existing = new Set(allExercises);
+  for (let p in plans) {
+    (plans[p].exercises || []).forEach(e => existing.add(e.name));
+    (plans[p].history || []).forEach(h => {
+      (h.exercises || []).forEach(e => existing.add(e.name));
+    });
+  }
+  allExercises = Array.from(existing);
+  saveAllExercises();
+}
+
 function saveAllExercises() {
   localStorage.setItem('allExercises', JSON.stringify(allExercises));
 }
