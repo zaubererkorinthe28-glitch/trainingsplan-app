@@ -66,7 +66,10 @@ canvas { background:#fff; border-radius:8px; padding:8px; display:block; width:1
 <button class="danger" onclick="openDeleteModal()" style="flex:1;">Plan löschen</button>
 </div>
 
-<input id="exerciseName" placeholder="Übung">
+<label class="small">Übung</label>
+<input list="exerciseList" id="exerciseName" placeholder="Übung suchen oder neu anlegen">
+<datalist id="exerciseList"></datalist>
+
 <input id="sets" type="number" placeholder="Sätze">
 <label class="small"><input id="bodyweight" type="checkbox"> Körpergewicht</label>
 <textarea id="notes" placeholder="Notizen zur Übung"></textarea>
@@ -185,6 +188,12 @@ canvas { background:#fff; border-radius:8px; padding:8px; display:block; width:1
 // --- Daten & Hilfsvariablen ---
 let plans = JSON.parse(localStorage.getItem('plans')||'{}');
 let chart = null;
+let allExercises = JSON.parse(localStorage.getItem('allExercises') || '[]');
+
+function saveAllExercises() {
+  localStorage.setItem('allExercises', JSON.stringify(allExercises));
+}
+
 let editing = {plan:null,index:null};
 let historyEditing = {plan:null,index:null};
 let planToDelete = null;
@@ -297,6 +306,14 @@ function addExercise(){
   const bodyweight=document.getElementById('bodyweight').checked;
   const notes=document.getElementById('notes').value.trim();
   if(!name||!sets) return alert('Übung & Sätze erforderlich');
+  
+  // Falls Übung neu ist → zu globaler Liste hinzufügen
+  if (!allExercises.includes(name)) {
+    allExercises.push(name);
+    saveAllExercises();
+    updateExerciseListDropdown();
+  }
+
   plans[plan].exercises.push({name,sets,bodyweight,notes});
   saveData();
   document.getElementById('exerciseName').value=''; document.getElementById('sets').value=''; document.getElementById('bodyweight').checked=false; document.getElementById('notes').value='';
@@ -605,11 +622,24 @@ function importData(input){
 function showDebugData(){ document.getElementById('debugOutput').textContent = JSON.stringify(plans,null,2); }
 function clearDebug(){ if(confirm('localStorage wirklich leeren?')){ localStorage.removeItem('plans'); plans={}; saveData(); renderPlanSelectors(); renderHistory(); updateExerciseSelectProgress(); renderOverview(); document.getElementById('debugOutput').textContent=''; alert('Gelöscht.'); } }
 
+function updateExerciseListDropdown() {
+  const dl = document.getElementById('exerciseList');
+  if (!dl) return;
+  dl.innerHTML = '';
+  allExercises.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    dl.appendChild(opt);
+  });
+}
+
+
 // --- Initialisierung ---
 renderPlanSelectors();
 updateExerciseSelectProgress();
 renderHistory();
 renderOverview();
+updateExerciseListDropdown();
 
 // --- Utility: close modals when clicking outside ---
 window.addEventListener('click', function(e){
