@@ -50,7 +50,7 @@ canvas { background:#fff; border-radius:8px; padding:8px; display:block; width:1
 <button id="btnTraining" onclick="showTab('training')">Training</button>
 <button id="btnProgress" onclick="showTab('progress')">Fortschritt</button>
 <button id="btnHistory" onclick="showTab('history')">Historie</button>
-<button id="btnOverview" onclick="showTab('overview')">Übersicht</button>
+<button id="btnOverview" onclick="showTab('overview')">Einstellungen</button>
 </div>
 
 <!-- PLÄNE -->
@@ -111,15 +111,34 @@ canvas { background:#fff; border-radius:8px; padding:8px; display:block; width:1
 <div id="historyList"></div>
 </div>
 
-<!-- ÜBERSICHT -->
+<!-- EINSTELLUNGEN -->
 <div id="overview" class="tab">
-<h2>Alle Trainingspläne</h2>
-<div id="allPlans"></div>
-<br>
-<h3>Backup</h3>
-<button onclick="exportData()" class="primary">Exportieren (JSON)</button>
-<input type="file" id="importFile" style="margin-top:6px" onchange="importData(this)">
+  <h2>⚙️ Einstellungen</h2>
+
+  <h3>Übungen</h3>
+  <div id="globalExercisesManager">
+    <input id="newGlobalExercise" placeholder="Neue Übung hinzufügen oder suchen">
+    <button class="primary" onclick="addGlobalExercise()">Hinzufügen</button>
+    <div id="globalExerciseList" class="note" style="margin-top:8px;"></div>
+  </div>
+
+  <hr>
+
+  <h3>Backup & Daten</h3>
+  <button onclick="exportData()" class="primary">Exportieren (JSON)</button>
+  <input type="file" id="importFile" style="margin-top:6px" onchange="importData(this)">
+  <hr>
+
+  <h3>Debug-Werkzeuge</h3>
+  <div style="background:#fff;border:1px solid #ccc;border-radius:6px;padding:10px;margin-top:8px;">
+    <div style="display:flex;gap:8px;">
+      <button onclick="showDebugData()" class="small-btn">Daten anzeigen</button>
+      <button onclick="clearDebug()" class="small-btn danger">localStorage leeren</button>
+    </div>
+    <pre id="debugOutput" style="white-space:pre-wrap;max-height:240px;overflow:auto;margin-top:8px;"></pre>
+  </div>
 </div>
+
 
 </div>
 
@@ -174,34 +193,11 @@ canvas { background:#fff; border-radius:8px; padding:8px; display:block; width:1
 </div>
 </div>
 
-<!-- Debug -->
-<div style="max-width:720px;margin:12px auto; padding:10px; background:#fff; border:1px solid #ccc; border-radius:6px;">
-<h4>Debug Daten</h4>
-<div style="display:flex;gap:8px;">
-<button onclick="showDebugData()" class="small-btn">Daten anzeigen</button>
-<button onclick="clearDebug()" class="small-btn">localStorage leeren</button>
-</div>
-<pre id="debugOutput" style="white-space:pre-wrap; max-height:240px; overflow:auto; margin-top:8px;"></pre>
-</div>
-
 <script>
 // --- Daten & Hilfsvariablen ---
 let plans = JSON.parse(localStorage.getItem('plans')||'{}');
 let chart = null;
 let allExercises = JSON.parse(localStorage.getItem('allExercises') || '[]');
-
-// --- Alte Übungen aus bestehenden Plänen übernehmen ---
-if (Object.keys(plans).length > 0) {
-  const existing = new Set(allExercises);
-  for (let p in plans) {
-    (plans[p].exercises || []).forEach(e => existing.add(e.name));
-    (plans[p].history || []).forEach(h => {
-      (h.exercises || []).forEach(e => existing.add(e.name));
-    });
-  }
-  allExercises = Array.from(existing);
-  saveAllExercises();
-}
 
 function saveAllExercises() {
   localStorage.setItem('allExercises', JSON.stringify(allExercises));
@@ -646,6 +642,71 @@ function updateExerciseListDropdown() {
   });
 }
 
+function addGlobalExercise() {
+  const name = document.getElementById('newGlobalExercise').value.trim();
+  if (!name) return alert('Bitte einen Übungsnamen eingeben.');
+  if (!allExercises.includes(name)) {
+    allExercises.push(name);
+    saveAllExercises();
+    updateExerciseListDropdown();
+    renderGlobalExercises();
+  } else {
+    alert(`"${name}" ist bereits vorhanden.`);
+  }
+  document.getElementById('newGlobalExercise').value = '';
+}
+
+function deleteGlobalExercise(name) {
+  if (!confirm(`"${name}" aus globaler Liste entfernen?`)) return;
+  allExercises = allExercises.filter(n => n !== name);
+  saveAllExercises();
+  updateExerciseListDropdown();
+  renderGlobalExercises();
+}
+
+function renderGlobalExercises() {
+  const div = document.getElementById('globalExerciseList');
+  if (!div) return;
+
+  if (allExercises.length === 0) {
+    div.innerHTML = '<i>Noch keine Übungen gespeichert.</i>';
+    return;
+  }
+
+  div.innerHTML = allExercises
+    .sort((a, b) => a.localeCompare(b))
+    .map(n => `
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin:4px 0;
+        padding:6px 8px;
+        background:#fff;
+        border-radius:6px;
+        border:1px solid #ddd;
+      ">
+        <span>${n}</span>
+        <button onclick="deleteGlobalExercise('${n}')"
+          style="
+            width:18px;
+            height:18px;
+            border:none;
+            background:#e74c3c;
+            color:white;
+            font-weight:bold;
+            line-height:16px;
+            text-align:center;
+            border-radius:3px;
+            cursor:pointer;
+          "
+          title="Löschen">×</button>
+      </div>
+    `)
+    .join('');
+}
+
+
 
 // --- Initialisierung ---
 renderPlanSelectors();
@@ -653,6 +714,8 @@ updateExerciseSelectProgress();
 renderHistory();
 renderOverview();
 updateExerciseListDropdown();
+renderGlobalExercises();
+
 
 // --- Utility: close modals when clicking outside ---
 window.addEventListener('click', function(e){
